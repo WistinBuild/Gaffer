@@ -1,0 +1,403 @@
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-bebas: "Bebas Neue", sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-jetbrains: "JetBrains Mono", monospace;
+
+  /* Strong custom easings (Emil) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #080b0f;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+  overflow-x: hidden;
+}
+
+/* Ambient mesh background — fixed, pointer-events-none (perf-safe) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(212, 175, 55, 0.08), transparent 60%),
+    radial-gradient(ellipse 50% 35% at 85% 30%, rgba(0, 255, 135, 0.06), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 95%, rgba(26, 71, 49, 0.25), transparent 70%);
+  pointer-events: none;
+}
+
+/* Grain overlay — fixed, pointer-events-none (perf-safe) */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.6);
+}
+
+/* Selection */
+::selection {
+  background: rgba(212, 175, 55, 0.3);
+  color: #ffffff;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .font-display {
+    font-family: var(--font-bebas);
+    letter-spacing: 0.05em;
+  }
+
+  /* Doppelrand / nested architecture helpers */
+  .hairline {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  .hairline-strong {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  .inner-glow {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+  }
+
+  /* Stagger entry — set via inline style on parent: --stagger-delay */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(8px);
+    animation: reveal 800ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) forwards;
+    animation-delay: var(--stagger-delay, 0ms);
+  }
+}
+
+@keyframes reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Subtle idle float for showcase/hero cards */
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+/* Slow shimmer for foil rarity overlay */
+@keyframes foil-shimmer {
+  0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+  40%  { opacity: 0.5; }
+  100% { transform: translateX(220%) skewX(-20deg); opacity: 0; }
+}
+
+/* Card flip-in on selection / mint */
+@keyframes card-flip-in {
+  0%   { transform: rotateY(-90deg) scale(0.95); opacity: 0; }
+  60%  { transform: rotateY(15deg) scale(1.02); opacity: 1; }
+  100% { transform: rotateY(0) scale(1); opacity: 1; }
+}
+
+/* Endless broadcast ticker */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Pulsing live indicator */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,59,59,0.6); }
+  50%      { opacity: 0.6; box-shadow: 0 0 0 8px rgba(255,59,59,0); }
+}
+
+/* Big number flicker — CRT scoreboard energy */
+@keyframes scoreboard-flicker {
+  0%, 100% { opacity: 1; }
+  92%      { opacity: 1; }
+  93%      { opacity: 0.4; }
+  94%      { opacity: 1; }
+  97%      { opacity: 0.7; }
+  98%      { opacity: 1; }
+}
+
+/* Hot edge pulse — for featured cards */
+@keyframes hot-edge {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0,255,135,0.4), 0 0 24px rgba(0,255,135,0.15); }
+  50%      { box-shadow: 0 0 0 1px rgba(0,255,135,0.8), 0 0 40px rgba(0,255,135,0.45); }
+}
+
+/* Slot fill — when a player drops into a squad slot */
+@keyframes slot-fill {
+  0%   { transform: scale(0.7) rotateY(-90deg); opacity: 0; filter: blur(8px); }
+  40%  { transform: scale(1.08) rotateY(10deg); opacity: 1; filter: blur(0); box-shadow: 0 0 0 0 rgba(212,175,55,0.7); }
+  70%  { transform: scale(1.02) rotateY(0deg); box-shadow: 0 0 0 8px rgba(212,175,55,0); }
+  100% { transform: scale(1) rotateY(0deg); }
+}
+
+/* Card flight — brief pop when picker card is clicked */
+@keyframes card-flight {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.12) translateY(-6px); filter: brightness(1.3); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Synergy unlocked pop */
+@keyframes synergy-pop {
+  0%   { transform: scale(0.7) translateY(8px); opacity: 0; filter: blur(6px); }
+  60%  { transform: scale(1.06); opacity: 1; filter: blur(0); }
+  100% { transform: scale(1); }
+}
+
+/* Badge bounce — captain/bench toggle */
+@keyframes badge-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Ready ring — full-circle glow when squad complete */
+@keyframes ready-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,135,0.6), inset 0 0 0 1px rgba(0,255,135,0.5); }
+  50%      { box-shadow: 0 0 0 12px rgba(0,255,135,0), inset 0 0 0 1px rgba(0,255,135,0.9); }
+}
+
+/* Sweep — gold light passing across a button */
+@keyframes button-sweep {
+  0%   { transform: translateX(-100%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+
+/* Confetti burst on completion */
+@keyframes confetti-up {
+  0%   { transform: translate(0,0) rotate(0); opacity: 1; }
+  100% { transform: translate(var(--cx), var(--cy)) rotate(720deg); opacity: 0; }
+}
+
+/* Holographic foil rotation — for ICON cards */
+@keyframes icon-foil {
+  0%   { transform: rotate(0deg) scale(1.4); }
+  100% { transform: rotate(360deg) scale(1.4); }
+}
+
+/* Page arrival — bold zoom-in with depth */
+@keyframes page-in {
+  0%   { opacity: 0; transform: scale(1.04) translateY(-8px); filter: blur(8px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+
+/* Page sweep — diagonal light sweeps across viewport */
+@keyframes page-sweep {
+  0%   { transform: translateX(0); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateX(400%); opacity: 0; }
+}
+
+/* Mega pop — explosive scale entrance */
+@keyframes mega-pop {
+  0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; filter: blur(12px); }
+  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; filter: blur(0); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* Shake — bold error vibrate */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-10px); }
+  20% { transform: translateX(10px); }
+  30% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  50% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  70% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+  90% { transform: translateX(-1px); }
+}
+
+/* Bold flash — full-screen white blink */
+@keyframes flash {
+  0%, 100% { opacity: 0; }
+  10% { opacity: 1; }
+}
+
+/* Tilt-tap — feedback on link/button click */
+@keyframes tap {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(0.93); }
+  60%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* Heartbeat — for live indicators */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.25); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.2); }
+  70% { transform: scale(1); }
+}
+
+/* Title slam — heading lands hard */
+@keyframes title-slam {
+  0%   { opacity: 0; transform: scale(1.4) translateY(-30px); filter: blur(16px); letter-spacing: 0.5em; }
+  50%  { opacity: 1; transform: scale(0.96) translateY(4px); filter: blur(0); letter-spacing: 0.05em; }
+  70%  { transform: scale(1.02) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+/* HOVER PRIMITIVES — apply to any element/word */
+.hover-word { transition: transform 300ms var(--ease-out), text-shadow 300ms var(--ease-out), color 200ms; cursor: default; }
+.hover-word:hover { transform: translateY(-3px); }
+.hover-word-gold:hover     { text-shadow: 0 0 30px rgba(212,175,55,0.6); }
+.hover-word-electric:hover { text-shadow: 0 0 28px rgba(0,255,135,0.55); }
+.hover-word-white:hover    { text-shadow: 0 0 22px rgba(255,255,255,0.35); }
+.hover-word-red:hover      { text-shadow: 0 0 24px rgba(255,59,59,0.5); }
+
+/* Letter-wave: lift each char in sequence on parent hover */
+.letter-wave:hover > span { transform: translateY(calc(var(--lift, 8px) * -1)); }
+.letter-wave[data-glow="gold"]:hover > span     { text-shadow: 0 0 22px rgba(212,175,55,0.55); }
+.letter-wave[data-glow="electric"]:hover > span { text-shadow: 0 0 22px rgba(0,255,135,0.55); }
+.letter-wave[data-glow="white"]:hover > span    { text-shadow: 0 0 18px rgba(255,255,255,0.35); }
+
+/* Tactile lift for any chip/stat block */
+.hover-lift { transition: transform 250ms var(--ease-out), box-shadow 250ms var(--ease-out), border-color 250ms; }
+.hover-lift:hover { transform: translateY(-2px); }
+
+/* Squad/setup animation utilities */
+.animate-slot-fill    { animation: slot-fill 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both; transform-origin: center; }
+.animate-card-flight  { animation: card-flight 380ms cubic-bezier(0.23, 1, 0.32, 1); }
+.animate-synergy-pop  { animation: synergy-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-badge-pop    { animation: badge-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-ready-ring   { animation: ready-ring 1.8s ease-in-out infinite; }
+.button-sweep-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%);
+  animation: button-sweep 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Bold animation utilities */
+/* Tile rim shimmer — sweeps gradient on outer border */
+@keyframes tile-rim-shimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-page-in    { animation: page-in 600ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+.animate-mega-pop   { animation: mega-pop 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-shake      { animation: shake 600ms ease-in-out; }
+.animate-flash      { animation: flash 400ms ease-out; }
+.animate-tap        { animation: tap 250ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.animate-heartbeat  { animation: heartbeat 1.3s ease-in-out infinite; }
+.animate-title-slam { animation: title-slam 900ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+
+@layer utilities {
+  .animate-marquee {
+    animation: marquee-x 50s linear infinite;
+  }
+  .animate-marquee-fast {
+    animation: marquee-x 30s linear infinite;
+  }
+  .animate-live-dot {
+    animation: live-pulse 1.4s cubic-bezier(0.4,0,0.6,1) infinite;
+  }
+  .animate-scoreboard {
+    animation: scoreboard-flicker 6s linear infinite;
+  }
+  .animate-hot-edge {
+    animation: hot-edge 2s ease-in-out infinite;
+  }
+  .scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 2px,
+      rgba(255,255,255,0.025) 2px,
+      rgba(255,255,255,0.025) 3px
+    );
+  }
+  .floodlight-left {
+    background: linear-gradient(135deg, rgba(212,175,55,0.18) 0%, transparent 55%);
+  }
+  .floodlight-right {
+    background: linear-gradient(225deg, rgba(0,255,135,0.14) 0%, transparent 55%);
+  }
+  .animate-float-slow {
+    animation: float-bob 5s ease-in-out infinite;
+  }
+  .animate-float-slow-delay {
+    animation: float-bob 5.5s ease-in-out infinite;
+    animation-delay: 0.8s;
+  }
+  .animate-float-slow-delay-2 {
+    animation: float-bob 6s ease-in-out infinite;
+    animation-delay: 1.6s;
+  }
+  .animate-card-in {
+    animation: card-flip-in 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    transform-origin: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-slow,
+  .animate-float-slow-delay,
+  .animate-float-slow-delay-2 {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: reveal-fade 200ms ease forwards;
+    animation-delay: var(--stagger-delay, 0ms);
+  }
+  @keyframes reveal-fade {
+    to {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+}

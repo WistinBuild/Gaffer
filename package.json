@@ -1,0 +1,16 @@
+{
+  "name": "gaffer",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=packages/app",
+    "build": "npm run build --workspace=packages/app",
+    "compile": "npm run compile --workspace=packages/contracts",
+    "test:contracts": "npm run test --workspace=packages/contracts",
+    "deploy:testnet": "npm run deploy:testnet --workspace=packages/contracts",
+    "deploy:mainnet": "npm run deploy:mainnet --workspace=packages/contracts"
+  }
+}
