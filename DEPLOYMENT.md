@@ -25,9 +25,9 @@ The contracts' `tokenURI` is `baseURI + tokenId`. The metadata routes live at
 
 ## 1. Buy a domain
 
-One domain is enough (e.g. `gaffer.gg`). Everything — site, metadata, bot — is
-served from it. You do **not** need the `api.gaffer.gg` subdomain the contracts
-were originally deployed with; step 4 repoints them.
+One domain is enough — `gaffer.games`. Everything — site, metadata, bot — is
+served from it. You do **not** need the dead `api.gaffer.gg` subdomain the
+contracts were originally deployed with; step 4 repoints them to gaffer.games.
 
 ## 2. Deploy to Vercel
 
@@ -50,7 +50,7 @@ long-lived Node process. Vercel is the lowest-friction fit for this stack.
 | `NEXT_PUBLIC_SQUAD_WARS_ADDRESS` | public | |
 | `NEXT_PUBLIC_PLAYER_MINT_ADDRESS` | public | |
 | `NEXT_PUBLIC_USDC_ADDRESS` | public | USDC token |
-| `NEXT_PUBLIC_SITE_URL` | public | `https://gaffer.gg` — must match the baseURI domain |
+| `NEXT_PUBLIC_SITE_URL` | public | `https://gaffer.games` — must match the baseURI domain |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | public | walletconnect.com cloud project |
 | `TREASURY_PRIVATE_KEY` | **secret** | dedicated low-balance hot wallet — NOT the owner key |
 | `BOT_TRIGGER_SECRET` | **secret** | `openssl rand -hex 32`; gates `/api/bot/*` |
@@ -67,14 +67,14 @@ After the domain resolves to the deployed app:
 
 ```bash
 cd packages/contracts
-SITE_URL=https://gaffer.gg node scripts/set-base-uri.mjs
+SITE_URL=https://gaffer.games node scripts/set-base-uri.mjs
 ```
 
 This calls `setBaseURI` (owner-only) on both NFT contracts so:
-- `GafferNFT.tokenURI(id)`  → `https://gaffer.gg/metadata/<id>`
-- `PlayerMint.tokenURI(id)` → `https://gaffer.gg/players/<id>`
+- `GafferNFT.tokenURI(id)`  → `https://gaffer.games/metadata/<id>`
+- `PlayerMint.tokenURI(id)` → `https://gaffer.games/players/<id>`
 
-Verify: open `https://gaffer.gg/metadata/1` (JSON) and the `image` URL it returns.
+Verify: open `https://gaffer.games/metadata/1` (JSON) and the `image` URL it returns.
 
 ## 5. Bot automation (treasury)
 
