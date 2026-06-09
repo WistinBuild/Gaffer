@@ -12,6 +12,7 @@ import {
   BOT_SQUAD_PLAYER_IDS,
   BOT_SQUAD_POSITIONS,
 } from "@/lib/serverChain";
+import { checkBotAuth } from "@/lib/botAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,8 @@ export const dynamic = "force-dynamic";
  *   3. Locks its decision (captain slot 4, bench slot 3)
  */
 export async function POST(req: NextRequest) {
+  const denied = checkBotAuth(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const warId = BigInt(body.warId);

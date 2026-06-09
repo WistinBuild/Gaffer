@@ -8,6 +8,7 @@ import {
   GAFFER_NFT_ABI,
   ORACLE_ABI,
 } from "@/lib/serverChain";
+import { checkBotAuth } from "@/lib/botAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,6 +75,8 @@ async function readSquadPlayerIds(
  * resolveWar.
  */
 export async function POST(req: NextRequest) {
+  const denied = checkBotAuth(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const warId = BigInt(body.warId);
