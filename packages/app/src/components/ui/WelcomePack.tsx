@@ -6,7 +6,7 @@ import playersData from "@/data/players.json";
 import { Player } from "@/types";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { playCoin, playLevelUp, playSuccess, playWhistle, unlockAudio } from "@/lib/sounds";
-import { pickRandomStarterFive, setStarterIds, type Rarity } from "@/lib/userRoster";
+import { pickRandomStarterFive, setStarterIds, getStarterIds, type Rarity } from "@/lib/userRoster";
 
 const players = playersData as Player[];
 
@@ -16,31 +16,68 @@ function pickStarterFive() {
 
 const STORAGE_PREFIX = "gaffer_pack_claimed_";
 
+function rarityForRating(rating: number): Rarity {
+  return rating >= 75 ? "SILVER" : "BRONZE";
+}
+
 export function WelcomePack() {
   const { address, isConnected } = useAccount();
   const [open, setOpen] = useState(false);
   const [cards, setCards] = useState<{ player: Player; rarity: Rarity }[]>([]);
 
+  // Grant the starter pack if unclaimed; otherwise re-show the SAME five (no
+  // reroll). Used both for the silent first-connect auto-open and manual reopen.
+  function openPack(addressLower: string) {
+    const key = STORAGE_PREFIX + addressLower;
+    const claimed = localStorage.getItem(key);
+    if (claimed) {
+      const ids = getStarterIds(addressLower);
+      const existing = ids
+        .map((id) => players.find((p) => p.id === id))
+        .filter((p): p is Player => !!p)
+        .map((p) => ({ player: p, rarity: rarityForRating(p.rating) }));
+      if (existing.length) {
+        setCards(existing);
+        setOpen(true);
+        return;
+      }
+      // claimed flag set but no saved players (edge) — fall through and grant.
+    }
+    const picked = pickStarterFive();
+    setCards(picked);
+    setOpen(true);
+    setStarterIds(addressLower, picked.map((c) => c.player.id));
+    localStorage.setItem(key, String(Date.now()));
+  }
+
+  // Silent first-time grant on connect.
   useEffect(() => {
     if (!isConnected || !address || typeof window === "undefined") return;
     const key = STORAGE_PREFIX + address.toLowerCase();
     if (localStorage.getItem(key)) return;
-    // First-time connect for this address — give them a pack
-    const picked = pickStarterFive();
-    setCards(picked);
-    setOpen(true);
-    setStarterIds(address.toLowerCase(), picked.map((c) => c.player.id));
-    localStorage.setItem(key, String(Date.now()));
+    openPack(address.toLowerCase());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, address]);
 
-  // Dev/debug trigger — call window.__openStarterPack() from console.
+  // Manual reopen: navigated to /play?pack=open, or window event / debug call.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    (window as any).__openStarterPack = () => {
-      setCards(pickStarterFive());
-      setOpen(true);
+    if (typeof window === "undefined" || !address) return;
+    const addressLower = address.toLowerCase();
+    const trigger = () => {
+      openPack(addressLower);
+      // Drop the query param so a refresh doesn't reopen it.
+      if (new URLSearchParams(window.location.search).get("pack") === "open") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("pack");
+        window.history.replaceState({}, "", url.toString());
+      }
     };
-  }, []);
+    if (new URLSearchParams(window.location.search).get("pack") === "open") trigger();
+    window.addEventListener("gaffer:open-pack", trigger);
+    (window as any).__openStarterPack = trigger;
+    return () => window.removeEventListener("gaffer:open-pack", trigger);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
   if (!open) return null;
   return <PackReveal cards={cards} onClose={() => setOpen(false)} />;

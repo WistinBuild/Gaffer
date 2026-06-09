@@ -649,7 +649,7 @@ function EmptyRoster({ connected }: { connected: boolean }) {
         </p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
           {connected ? (
-            <Link href="/play" className="group inline-flex items-center gap-2 rounded-full bg-gaffer-electric pl-6 pr-2 py-2.5 text-gaffer-black hover:brightness-110 transition-transform duration-150 ease-out-strong active:scale-[0.97] animate-hot-edge">
+            <Link href="/play?pack=open" className="group inline-flex items-center gap-2 rounded-full bg-gaffer-electric pl-6 pr-2 py-2.5 text-gaffer-black hover:brightness-110 transition-transform duration-150 ease-out-strong active:scale-[0.97] animate-hot-edge">
               <span className="font-display text-base tracking-wider">OPEN MY PACK</span>
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gaffer-black/15">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H8M17 7V16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>

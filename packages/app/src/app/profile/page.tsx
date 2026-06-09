@@ -361,7 +361,7 @@ export default function ProfilePage() {
                   <div className="mt-8 rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
                     <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/60 hairline inner-glow p-10 text-center">
                       <div className="font-display text-2xl text-white">No players yet — head to Manager HQ to open your starter pack.</div>
-                      <Link href="/play" className="mt-4 inline-flex items-center gap-2 rounded-full bg-gaffer-electric pl-5 pr-2 py-2 text-gaffer-black hover:brightness-110 transition-transform duration-150 ease-out-strong active:scale-[0.97]">
+                      <Link href="/play?pack=open" className="mt-4 inline-flex items-center gap-2 rounded-full bg-gaffer-electric pl-5 pr-2 py-2 text-gaffer-black hover:brightness-110 transition-transform duration-150 ease-out-strong active:scale-[0.97]">
                         <span className="font-display text-sm tracking-wider">OPEN PACK</span>
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gaffer-black/15"><Arrow /></span>
                       </Link>
