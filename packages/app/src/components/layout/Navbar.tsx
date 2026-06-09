@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ConnectButton } from "@/components/ui/ConnectButton";
 import { SoundToggle } from "@/components/ui/SoundToggle";
+import { XLink } from "@/components/ui/XLink";
 import { playClick, playHover, unlockAudio } from "@/lib/sounds";
 
 // Three clusters separated by visual dividers in the pill nav
@@ -90,6 +91,11 @@ export function Navbar() {
           {/* Sound toggle */}
           <div className="hidden lg:block">
             <SoundToggle />
+          </div>
+
+          {/* X / social */}
+          <div className="hidden lg:flex items-center justify-center h-9 w-9 rounded-full hover:bg-white/5 transition-colors duration-150">
+            <XLink size={16} />
           </div>
 
           {/* CTA */}
@@ -190,9 +196,15 @@ export function Navbar() {
             }}
           >
             <ConnectButton />
-            <div className="flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] uppercase text-white/40">
-              <SoundToggle />
-              <span>Sound</span>
+            <div className="flex items-center gap-5 font-mono text-[10px] tracking-[0.22em] uppercase text-white/40">
+              <div className="flex items-center gap-3">
+                <SoundToggle />
+                <span>Sound</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <XLink size={14} />
+                <span>Follow</span>
+              </div>
             </div>
           </div>
         </div>

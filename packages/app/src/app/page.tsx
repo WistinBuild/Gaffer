@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { Backdrop } from "@/components/ui/Backdrop";
+import { XLink } from "@/components/ui/XLink";
 import { EnterPitchButton } from "@/components/ui/EnterPitchButton";
 import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
@@ -555,6 +556,8 @@ function SiteFooter() {
             <Link href="/feed" className="hover:text-white transition-colors hover-word hover-word-white">Live feed</Link>
             <Link href="/marketplace" className="hover:text-white transition-colors hover-word hover-word-white">Market</Link>
             <Link href="/profile" className="hover:text-white transition-colors hover-word hover-word-white">My gaffer</Link>
+            <span className="h-3 w-px bg-white/10" />
+            <XLink size={15} />
           </div>
         </div>
       </div>
