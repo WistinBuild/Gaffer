@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { toUSDC, ensureUsdcAllowance } from "@/lib/usdc";
+import { useEnsureChain } from "@/lib/useEnsureChain";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { ConnectButton } from "@/components/ui/ConnectButton";
@@ -36,16 +37,24 @@ export default function MarketplacePage() {
     useWriteContract();
   const { writeContractAsync: approveAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const { wrongChain, ensureChain } = useEnsureChain();
   const { isLoading: txConfirming, isSuccess: txDone } = useWaitForTransactionReceipt({ hash: txHash });
   const [mintingId, setMintingId] = useState<string | null>(null);
 
   async function mintPlayer(playerId: string) {
     unlockAudio().then(playClick).catch(() => {});
     if (!address || !publicClient) return;
+    const onchain = supplyMap[playerId];
+    // Don't even ask the wallet if it's already sold out on-chain.
+    if (onchain && onchain.max > 0 && onchain.minted >= onchain.max) return;
     setMintingId(playerId);
     const player = ALL_PLAYERS.find((p) => p.id === playerId)!;
-    const amount = toUSDC(priceUSDC(player).toFixed(6));
+    // Charge the on-chain catalog price (source of truth) when we have it; the
+    // contract pulls exactly that amount, so approving the local estimate risks
+    // an "insufficient allowance" revert if the two ever diverge.
+    const amount = onchain?.price ?? toUSDC(priceUSDC(player).toFixed(6));
     try {
+      await ensureChain();
       await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.playerMint, amount);
       writeContract({
         address: CONTRACT_ADDRESSES.playerMint,
@@ -79,14 +88,14 @@ export default function MarketplacePage() {
   });
 
   const supplyMap = useMemo(() => {
-    const m: Record<string, { minted: number; max: number }> = {};
+    const m: Record<string, { minted: number; max: number; price: bigint }> = {};
     if (!catalogData) return m;
     ALL_PLAYERS.forEach((p, i) => {
       const res = catalogData[i];
       if (res?.status !== "success" || !res.result) return;
-      const c = res.result as { maxSupply: number | bigint; minted: number | bigint; exists: boolean };
+      const c = res.result as { maxSupply: number | bigint; minted: number | bigint; price: bigint; exists: boolean };
       if (!c.exists) return; // not seeded in catalog
-      m[p.id] = { minted: Number(c.minted), max: Number(c.maxSupply) };
+      m[p.id] = { minted: Number(c.minted), max: Number(c.maxSupply), price: BigInt(c.price) };
     });
     return m;
   }, [catalogData]);
@@ -332,18 +341,23 @@ export default function MarketplacePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((x, i) => {
                 const onchain = supplyMap[x.player.id];
+                const max = onchain?.max ?? x.maxSup;
+                const minted = onchain?.minted ?? 0;
+                const soldOut = !!onchain && max > 0 && minted >= max;
                 return (
                   <div key={x.player.id} className="reveal" style={{ ["--stagger-delay" as any]: `${Math.min(i * 20, 300)}ms` }}>
                     <MarketCard
                       player={x.player}
                       rarity={x.rarity}
                       price={x.price}
-                      minted={onchain?.minted ?? 0}
-                      max={onchain?.max ?? x.maxSup}
+                      minted={minted}
+                      max={max}
+                      soldOut={soldOut}
+                      wrongChain={wrongChain}
                       supplyLoading={supplyLoading && !onchain}
                       onMint={() => mintPlayer(x.player.id)}
                       isMinting={mintingId === x.player.id && (txSending || txConfirming)}
-                      canMint={isConnected && !txSending && !txConfirming}
+                      canMint={isConnected && !txSending && !txConfirming && !soldOut}
                     />
                   </div>
                 );
@@ -361,13 +375,15 @@ export default function MarketplacePage() {
 // ─── PIECES ─────────────────────────────────────────────────────────────────
 
 function MarketCard({
-  player, rarity, price, minted, max, supplyLoading, onMint, isMinting, canMint,
+  player, rarity, price, minted, max, soldOut, wrongChain, supplyLoading, onMint, isMinting, canMint,
 }: {
   player: Player;
   rarity: "BRONZE" | "SILVER" | "GOLD" | "ICON";
   price: number;
   minted: number;
   max: number;
+  soldOut: boolean;
+  wrongChain: boolean;
   supplyLoading: boolean;
   onMint: () => void;
   isMinting: boolean;
@@ -436,19 +452,25 @@ function MarketCard({
         {/* MINT button — calls PlayerMint.mintPlayer on-chain */}
         <button
           onClick={onMint}
-          disabled={!canMint || isMinting}
+          disabled={!canMint || isMinting || soldOut}
           className={`group/btn w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5
             transition-transform duration-150 ease-out-strong active:scale-[0.97] disabled:active:scale-100
             ${isMinting
               ? "bg-gaffer-gold/20 text-gaffer-gold cursor-wait"
-              : !canMint
-                ? "bg-white/5 hairline text-white/40 cursor-not-allowed"
-                : "bg-white/5 hairline text-white/85 hover:bg-gaffer-gold hover:text-gaffer-black"
+              : soldOut
+                ? "bg-white/5 hairline text-white/30 cursor-not-allowed"
+                : !canMint
+                  ? "bg-white/5 hairline text-white/40 cursor-not-allowed"
+                  : "bg-white/5 hairline text-white/85 hover:bg-gaffer-gold hover:text-gaffer-black"
             }`}
-          title={!canMint && !isMinting ? "Connect wallet to mint" : undefined}
+          title={
+            soldOut ? "Sold out" :
+            wrongChain ? "Wallet is on the wrong network — minting will switch it" :
+            (!canMint && !isMinting) ? "Connect wallet to mint" : undefined
+          }
         >
           <span className="font-display text-base tracking-wider">
-            {isMinting ? "MINTING…" : `MINT · ${priceLabel(player)} USDC`}
+            {soldOut ? "SOLD OUT" : isMinting ? "MINTING…" : wrongChain ? "SWITCH NETWORK" : `MINT · ${priceLabel(player)} USDC`}
           </span>
         </button>
       </div>

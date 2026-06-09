@@ -86,4 +86,20 @@ export async function ensureUsdcAllowance(
     args: [spender, amount],
   });
   await publicClient.waitForTransactionReceipt({ hash });
+
+  // Base Sepolia RPCs lag on read-after-write: a dependent tx submitted right
+  // after the approve receipt can still simulate against the OLD allowance and
+  // revert with "insufficient allowance". Poll until the allowance read reflects
+  // the approve before returning so the caller's next write succeeds.
+  for (let i = 0; i < 10; i++) {
+    const a = (await publicClient.readContract({
+      address: USDC_ADDRESS,
+      abi: USDC_ABI,
+      functionName: "allowance",
+      args: [owner, spender],
+    })) as bigint;
+    if (a >= amount) return;
+    await new Promise((r) => setTimeout(r, 800));
+  }
+  // Best-effort: the receipt landed, so proceed even if the read is still stale.
 }

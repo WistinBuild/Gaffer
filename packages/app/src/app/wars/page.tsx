@@ -12,6 +12,7 @@ import {
 } from "wagmi";
 import { zeroAddress, decodeEventLog, type Address } from "viem";
 import { toUSDC, fromUSDC, ensureUsdcAllowance } from "@/lib/usdc";
+import { useEnsureChain } from "@/lib/useEnsureChain";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -36,6 +37,9 @@ const hasContracts = CONTRACT_ADDRESSES.squadWars !== zeroAddress;
 
 // Scan war IDs 1..WAR_SCAN_LIMIT via multicall to enumerate every war
 const WAR_SCAN_LIMIT = 30;
+
+// SquadWars.MIN_STAKE is 1000 base units = 0.001 USDC. Stakes below this revert.
+const MIN_STAKE_USDC = 0.001;
 
 // On-chain War shape (matches SquadWars.getWar return)
 interface ChainWar {
@@ -139,11 +143,20 @@ export default function WarsPage() {
   const [botError, setBotError] = useState<string | null>(null);
 
   const publicClient = usePublicClient();
+  const { wrongChain, ensureChain } = useEnsureChain();
   const { writeContract, data: txHash, isPending: txSending, error: txError } =
     useWriteContract();
   const { writeContractAsync: approveAsync } = useWriteContract();
+  const { writeContractAsync: acceptAsync } = useWriteContract();
   const { data: txReceipt, isLoading: txConfirming, isSuccess: txDone } =
     useWaitForTransactionReceipt({ hash: txHash });
+
+  const [accepting, setAccepting] = useState<bigint | null>(null);
+
+  // Stake field must be a number ≥ MIN_STAKE, else createWar reverts "Stake too low".
+  const stakeNum = Number(createStake);
+  const stakeValid = Number.isFinite(stakeNum) && stakeNum >= MIN_STAKE_USDC;
+  const canStake = isConnected && !wrongChain && Boolean(hasMinted);
 
   // Refetch all war state when a tx confirms (creates / accepts / locks)
   useEffect(() => {
@@ -157,10 +170,13 @@ export default function WarsPage() {
   async function handleCreate() {
     if (!hasContracts) return alert("Contracts not deployed yet — set NEXT_PUBLIC_*_ADDRESS in .env.local");
     if (!address || !publicClient) return;
+    if (!hasMinted) { alert("Mint a squad first — you need 5 players to enter a war."); router.push("/squad"); return; }
+    if (!stakeValid) { alert(`Stake must be at least ${MIN_STAKE_USDC} USDC.`); return; }
     setChallengeMode("human");
     setBotError(null);
     const stake = toUSDC(createStake);
     try {
+      await ensureChain();
       await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
       writeContract({
         address: CONTRACT_ADDRESSES.squadWars,
@@ -168,17 +184,20 @@ export default function WarsPage() {
         functionName: "createWar",
         args: [BigInt(createMD), stake],
       });
-    } catch { /* user rejected approval */ }
+    } catch { /* user rejected approval / network switch */ }
   }
 
   async function handleChallengeBot() {
     if (!hasContracts) return alert("Contracts not deployed yet");
     if (!address || !publicClient) return;
+    if (!hasMinted) { alert("Mint a squad first — you need 5 players to enter a war."); router.push("/squad"); return; }
+    if (!stakeValid) { setBotError(`Stake must be at least ${MIN_STAKE_USDC} USDC.`); setBotPhase("error"); return; }
     setChallengeMode("bot");
     setBotPhase("idle");
     setBotError(null);
     const stake = toUSDC(createStake);
     try {
+      await ensureChain();
       await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
       writeContract({
         address: CONTRACT_ADDRESSES.squadWars,
@@ -241,18 +260,29 @@ export default function WarsPage() {
     })();
   }, [txDone, txReceipt, challengeMode, botPhase, createStake, router]);
 
+  // Accept a war: only navigate to squad-setup once the acceptWar tx is actually
+  // confirmed on-chain — otherwise a rejected/failed accept would strand the user
+  // on the setup page for a war they never joined.
   async function handleAccept(warId: bigint, stake: bigint) {
     if (!hasContracts) return alert("Contracts not deployed yet");
     if (!address || !publicClient) return;
+    if (!hasMinted) { alert("Mint a squad first — you need 5 players to accept a war."); router.push("/squad"); return; }
+    setAccepting(warId);
     try {
+      await ensureChain();
       await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
-      writeContract({
+      const hash = await acceptAsync({
         address: CONTRACT_ADDRESSES.squadWars,
         abi: SQUAD_WARS_ABI,
         functionName: "acceptWar",
         args: [warId],
       });
-    } catch { /* user rejected approval */ }
+      await publicClient.waitForTransactionReceipt({ hash });
+      if (typeof window !== "undefined") sessionStorage.setItem(`real_war_${warId}`, "1");
+      router.push(`/squad-setup/${warId}`);
+    } catch {
+      setAccepting(null); // surfaced via the tx banner / button reset
+    }
   }
 
   // Decision lock state
@@ -419,10 +449,11 @@ export default function WarsPage() {
                       <OpenWarCard
                         war={w}
                         isMine={isMine}
+                        accepting={accepting === w.id}
+                        disabled={accepting !== null || !canStake}
                         onAccept={() => {
                           if (isMine) return;
                           handleAccept(w.id, w.stake);
-                          router.push(`/squad-setup/${w.id}`);
                         }}
                       />
                     </div>
@@ -501,6 +532,7 @@ export default function WarsPage() {
             done={txDone && challengeMode === "human"}
             mode={challengeMode}
             botPhase={botPhase}
+            stakeValid={stakeValid}
           />
         )}
       </main>
@@ -697,10 +729,12 @@ function ActiveWarCard({
 }
 
 function OpenWarCard({
-  war, isMine, onAccept,
+  war, isMine, accepting, disabled, onAccept,
 }: {
   war: ChainWar;
   isMine: boolean;
+  accepting: boolean;
+  disabled: boolean;
   onAccept: () => void;
 }) {
   const stakeUSDC = fromUSDC(war.stake);
@@ -748,13 +782,13 @@ function OpenWarCard({
 
         <button
           onClick={onAccept}
-          disabled={isMine}
+          disabled={isMine || disabled || accepting}
           className="w-full rounded-full bg-white/5 hairline py-2.5 font-display text-base tracking-wider text-white/85
             transition-all duration-150 ease-out-strong active:scale-[0.97]
             hover:bg-gaffer-gold hover:text-gaffer-black
             disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/85"
         >
-          {isMine ? "WAITING FOR OPPONENT…" : `ACCEPT · ${stakeUSDC.toFixed(3)} USDC`}
+          {isMine ? "WAITING FOR OPPONENT…" : accepting ? "ACCEPTING…" : `ACCEPT · ${stakeUSDC.toFixed(3)} USDC`}
         </button>
       </div>
     </div>
@@ -812,7 +846,7 @@ function ResolvedRowChain({ war, me, last }: { war: ChainWar; me?: string; last:
 }
 
 function CreateWarModal({
-  matchday, stake, onMD, onStake, onClose, onCreate, sending, done, mode, botPhase,
+  matchday, stake, onMD, onStake, onClose, onCreate, sending, done, mode, botPhase, stakeValid,
 }: {
   matchday: number; stake: string;
   onMD: (n: number) => void; onStake: (s: string) => void;
@@ -820,6 +854,7 @@ function CreateWarModal({
   sending: boolean; done: boolean;
   mode: "human" | "bot";
   botPhase: "idle" | "awaiting-bot" | "ready" | "error";
+  stakeValid: boolean;
 }) {
   const isBot = mode === "bot";
   useEffect(() => {
@@ -895,8 +930,14 @@ function CreateWarModal({
                   value={stake}
                   onChange={(e) => onStake(e.target.value)}
                   placeholder="0.01"
+                  inputMode="decimal"
                   className="w-full bg-black/30 hairline rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-1 focus:ring-gaffer-gold/40"
                 />
+                {!stakeValid && (
+                  <p className="mt-2 font-mono text-[10px] tracking-[0.18em] text-gaffer-red/90 uppercase">
+                    Enter a stake of at least {MIN_STAKE_USDC} USDC
+                  </p>
+                )}
               </div>
 
               {/* potential pot */}
@@ -915,7 +956,7 @@ function CreateWarModal({
               )}
               <button
                 onClick={onCreate}
-                disabled={sending || !stake}
+                disabled={sending || !stakeValid}
                 className={`w-full rounded-full py-3.5 font-display text-xl tracking-wider text-gaffer-black
                   transition-transform duration-150 ease-out-strong active:scale-[0.97] disabled:opacity-50 ${
                   isBot ? "bg-gaffer-electric hover:brightness-110" : "bg-gaffer-gold hover:bg-gaffer-gold-light"

@@ -40,24 +40,30 @@ export default function MatchPage() {
   const router = useRouter();
   const warId = params?.id as string;
 
-  // Load setup from sessionStorage (set by /squad-setup/[id])
+  // Load setup from sessionStorage (set by /squad-setup/[id]). No fallback squad:
+  // if there's no setup we must NOT fabricate a lineup of players the user may not
+  // own — redirect them to pick their real squad instead (handled below).
   const setup = useMemo(() => {
     if (typeof window === "undefined") return null;
     const raw = sessionStorage.getItem(`match_setup_${warId}`);
-    if (!raw) {
-      // Fallback default setup
-      return {
-        squad: ["alisson", "van_dijk", "rodri", "bellingham", "mbappe"],
-        captainId: "mbappe",
-        benchedId: "bellingham",
-        mentality: "Balanced",
-        roles: {},
-        instructions: {},
-        equippedCards: {},
-      };
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
     }
-    return JSON.parse(raw);
   }, [warId]);
+
+  // Missing setup → send the user to squad-setup for this war rather than playing
+  // with a hardcoded lineup that feeds the on-chain finalize flow.
+  const [setupMissing, setSetupMissing] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!sessionStorage.getItem(`match_setup_${warId}`)) {
+      setSetupMissing(true);
+      router.replace(`/squad-setup/${warId}`);
+    }
+  }, [warId, router]);
 
   const squad: DugholePlayer[] = useMemo(
     () => (setup?.squad ?? []).map((id: string) => enrichPlayer(players.find((p) => p.id === id)!)),
@@ -155,9 +161,10 @@ export default function MatchPage() {
       setState((s) => {
         if (!s) return s;
         const next = Math.min(s.minute + 2, fireAt);
-        // Slight passive score drift for both sides
-        const yourDrift = Math.random() < 0.18 ? 1 : 0;
-        const oppDrift = Math.random() < 0.18 ? 1 : 0;
+        // No passive score drift: the score is a pure function of the manager's
+        // decisions so it stays deterministic and reconcilable with the on-chain
+        // resolution (was previously nudged by Math.random(), which made a
+        // stake-bearing scoreline diverge from what the contract settles).
         if (next >= fireAt) {
           // Time to fire a decision
           const positions = s.deck.map((d) => d.player.position);
@@ -180,9 +187,9 @@ export default function MatchPage() {
           setCurrentDecision({ template, player, probs });
           setPhase("decision");
           clearInterval(interval);
-          return { ...s, minute: next, yourScore: s.yourScore + yourDrift, oppScore: s.oppScore + oppDrift };
+          return { ...s, minute: next };
         }
-        return { ...s, minute: next, yourScore: s.yourScore + yourDrift, oppScore: s.oppScore + oppDrift };
+        return { ...s, minute: next };
       });
     }, SIM_TICK_MS);
 
@@ -269,6 +276,17 @@ export default function MatchPage() {
     }, DECISION_TIMER_MS);
     return () => clearTimeout(t);
   }, [phase, currentDecision, chooseOption]);
+
+  if (setupMissing) {
+    return (
+      <>
+        <Navbar />
+        <main className="relative min-h-[100dvh] flex items-center justify-center">
+          <div className="font-display text-white text-3xl">Pick your squad first…</div>
+        </main>
+      </>
+    );
+  }
 
   if (!state) {
     return (

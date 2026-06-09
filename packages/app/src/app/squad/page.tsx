@@ -12,6 +12,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { VideoBackdrop } from "@/components/ui/VideoBackdrop";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { useCountUp } from "@/lib/useCountUp";
+import { useEnsureChain } from "@/lib/useEnsureChain";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 import playersData from "@/data/players.json";
 import { Player, Position } from "@/types";
@@ -186,8 +187,9 @@ export default function SquadBuilderPage() {
     useWriteContract();
   const { isLoading: isConfirming, isSuccess: isMinted } =
     useWaitForTransactionReceipt({ hash });
+  const { ensureChain } = useEnsureChain();
 
-  function handleMint() {
+  async function handleMint() {
     if (!isReady || !address) return;
     const playerIds = slots.map((s) => s.player!.id) as [string, string, string, string, string];
     const positions = slots.map((s) => POSITION_NUM[s.player!.position]) as [
@@ -197,6 +199,11 @@ export default function SquadBuilderPage() {
       number,
       number
     ];
+    try {
+      await ensureChain();
+    } catch {
+      return; // user rejected the network switch
+    }
     writeContract({
       address: CONTRACT_ADDRESSES.gafferNFT,
       abi: GAFFER_NFT_ABI,
