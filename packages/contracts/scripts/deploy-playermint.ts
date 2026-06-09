@@ -12,6 +12,10 @@ function hashSeed(id: string): number {
 // Circle USDC on Base Sepolia (override with USDC_ADDRESS).
 const DEFAULT_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 
+// Mirrors packages/app/src/lib/market.ts — keep identical. Tuned so the most
+// expensive card (Pelé) seeds at exactly 1.00 USDC; floor ~0.063 USDC.
+const PRICE_SCALE = 2.440104;
+
 function priceUSDC(p: any): number {
   const norm = Math.max(0, Math.min(1, (p.rating - 70) / 30));
   const ratingPremium = Math.pow(norm, 2.4) * 0.18;
@@ -20,6 +24,7 @@ function priceUSDC(p: any): number {
   const seed = hashSeed(p.id);
   const variance = (((seed * 7) % 37) - 18) / 100;
   price *= 1 + variance;
+  price *= PRICE_SCALE;
   return Math.round(price * 1000) / 1000;
 }
 

@@ -7,9 +7,18 @@
  *   rating-prem = ((rating - 70) / 30) ^ 2.4 * 0.18  // exponential curve for top tier
  *   legend×    = 2.6
  *   variance   = ±18% per-id (hash-stable)
+ *   scale×     = PRICE_SCALE  // normalises so the most expensive card == 1.00 USDC
+ *
+ * NOTE: this formula is mirrored byte-for-byte in
+ * packages/contracts/scripts/deploy-playermint.ts (and the re-seed script),
+ * which seeds the on-chain catalog price. Change both together, then re-seed.
  */
 
 import type { Player } from "@/types";
+
+// Tuned so max(priceUSDC over players.json) === 1.000 USDC (Pelé, rating 98).
+// = 1 / max(unscaled price). Floor lands around 0.063 USDC.
+const PRICE_SCALE = 2.440104;
 
 export type Rarity = "BRONZE" | "SILVER" | "GOLD" | "ICON";
 
@@ -37,6 +46,8 @@ export function priceUSDC(p: Player): number {
   const seed = hashSeed(p.id);
   const variance = (((seed * 7) % 37) - 18) / 100;
   price *= 1 + variance;
+
+  price *= PRICE_SCALE; // normalise so the top card == 1.00 USDC
 
   return Math.round(price * 1000) / 1000; // 3 decimal precision
 }
