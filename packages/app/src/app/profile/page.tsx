@@ -345,7 +345,7 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <div className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Balance</div>
-                        <div className="font-display text-3xl text-gaffer-electric tabular-nums leading-none" style={{ textShadow: "0 0 18px rgba(0,255,135,0.35)" }}>
+                        <div className="font-display text-3xl text-gaffer-electric tabular-nums leading-none" style={{ textShadow: "0 0 18px rgba(34, 197, 141,0.35)" }}>
                           {points}
                         </div>
                       </div>

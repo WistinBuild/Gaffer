@@ -43,7 +43,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
             className="absolute inset-y-0 -left-1/2 w-1/2"
             style={{
               background:
-                "linear-gradient(90deg, transparent 0%, rgba(212,175,55,0.05) 30%, rgba(212,175,55,0.45) 50%, rgba(0,255,135,0.4) 60%, rgba(212,175,55,0.05) 70%, transparent 100%)",
+                "linear-gradient(90deg, transparent 0%, rgba(212,175,55,0.05) 30%, rgba(212,175,55,0.45) 50%, rgba(34, 197, 141,0.4) 60%, rgba(212,175,55,0.05) 70%, transparent 100%)",
               animation: "page-sweep 700ms cubic-bezier(0.23, 1, 0.32, 1) forwards",
               filter: "blur(12px)",
             }}

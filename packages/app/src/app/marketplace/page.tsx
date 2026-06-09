@@ -340,7 +340,7 @@ function MarketCard({
   const supplyPct = (circ / max) * 100;
 
   const accentColor =
-    rarity === "ICON" ? "#7CFFC4" :
+    rarity === "ICON" ? "#7FE3C0" :
     rarity === "GOLD" ? "#F5D26C" :
     rarity === "SILVER" ? "#E5E5E5" : "#E0A668";
 

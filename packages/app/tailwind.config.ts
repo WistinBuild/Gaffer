@@ -6,25 +6,25 @@ const config: Config = {
     extend: {
       colors: {
         gaffer: {
-          black: "#080B0F",
-          surface: "#0F1923",
-          "surface-2": "#162030",
-          pitch: "#1A4731",
-          "pitch-light": "#235E42",
+          black: "#0B0E14",
+          surface: "#131A24",
+          "surface-2": "#1B2430",
+          pitch: "#15392B",
+          "pitch-light": "#1F5240",
           gold: "#D4AF37",
           "gold-light": "#F5E192",
-          electric: "#00FF87",
-          "electric-dim": "#00CC6A",
-          red: "#FF3B3B",
-          muted: "#8A9BA8",
-          "muted-2": "#4A5968",
+          electric: "#22C58D",
+          "electric-dim": "#15936A",
+          red: "#E25563",
+          muted: "#8B97A6",
+          "muted-2": "#4A5663",
           base: "#0052FF",
         },
         rarity: {
           bronze: "#CD7F32",
           silver: "#C0C0C0",
           gold: "#D4AF37",
-          icon: "#00FF87",
+          icon: "#22C58D",
         },
       },
       fontFamily: {
@@ -39,7 +39,7 @@ const config: Config = {
       },
       backgroundImage: {
         "pitch-gradient":
-          "linear-gradient(180deg, #080B0F 0%, #0F2820 50%, #080B0F 100%)",
+          "linear-gradient(180deg, #0B0E14 0%, #0F2A20 50%, #0B0E14 100%)",
         "card-bronze":
           "linear-gradient(145deg, #3D2000 0%, #CD7F32 50%, #3D2000 100%)",
         "card-silver":
@@ -47,9 +47,9 @@ const config: Config = {
         "card-gold":
           "linear-gradient(145deg, #2A1F00 0%, #D4AF37 50%, #2A1F00 100%)",
         "card-icon":
-          "linear-gradient(145deg, #003320 0%, #00FF87 50%, #003320 100%)",
+          "linear-gradient(145deg, #06241A 0%, #22C58D 50%, #06241A 100%)",
         "hero-overlay":
-          "linear-gradient(180deg, rgba(8,11,15,0.3) 0%, rgba(8,11,15,0.7) 60%, #080B0F 100%)",
+          "linear-gradient(180deg, rgba(11,14,20,0.3) 0%, rgba(11,14,20,0.7) 60%, #0B0E14 100%)",
       },
       animation: {
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
@@ -82,12 +82,12 @@ const config: Config = {
         },
       },
       boxShadow: {
-        "card-bronze": "0 0 24px rgba(205,127,50,0.5)",
-        "card-silver": "0 0 24px rgba(192,192,192,0.5)",
-        "card-gold": "0 0 24px rgba(212,175,55,0.6)",
-        "card-icon": "0 0 40px rgba(0,255,135,0.7)",
-        "glow-electric": "0 0 30px rgba(0,255,135,0.5)",
-        "glow-gold": "0 0 30px rgba(212,175,55,0.5)",
+        "card-bronze": "0 0 20px rgba(205,127,50,0.35)",
+        "card-silver": "0 0 20px rgba(192,192,192,0.35)",
+        "card-gold": "0 0 20px rgba(212,175,55,0.4)",
+        "card-icon": "0 0 28px rgba(34,197,141,0.45)",
+        "glow-electric": "0 0 22px rgba(34,197,141,0.32)",
+        "glow-gold": "0 0 22px rgba(212,175,55,0.32)",
       },
     },
   },

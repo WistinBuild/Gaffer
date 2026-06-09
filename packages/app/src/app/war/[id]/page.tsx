@@ -337,7 +337,7 @@ function SquadBreakdown({
           <div className="text-right">
             <div className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Total</div>
             <div className={`font-display text-5xl tabular-nums leading-none ${isWinner ? "text-gaffer-electric" : "text-white/85"}`}
-              style={isWinner ? { textShadow: "0 0 24px rgba(0,255,135,0.4)" } : undefined}>
+              style={isWinner ? { textShadow: "0 0 24px rgba(34, 197, 141,0.4)" } : undefined}>
               {total}
             </div>
           </div>
@@ -356,7 +356,7 @@ function SquadBreakdown({
 
 function SquadPlayerRow({ s }: { s: SquadEntry }) {
   const p = pick(s.id);
-  const accentColor = s.rarity === "ICON" ? "#7CFFC4" : s.rarity === "GOLD" ? "#F5D26C" : s.rarity === "SILVER" ? "#E5E5E5" : "#E0A668";
+  const accentColor = s.rarity === "ICON" ? "#7FE3C0" : s.rarity === "GOLD" ? "#F5D26C" : s.rarity === "SILVER" ? "#E5E5E5" : "#E0A668";
   return (
     <div className={`rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all duration-150 ${
       s.isCaptain ? "bg-gaffer-electric/10 hairline-strong" :

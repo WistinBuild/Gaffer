@@ -288,7 +288,7 @@ export default function SquadSetupPage() {
                               }}
                               className={`px-2 py-0.5 rounded-full font-mono text-[9px] tracking-[0.18em] font-bold transition-all duration-150 ease-out-strong active:scale-95 ${
                                 isCapt
-                                  ? `bg-gaffer-electric text-gaffer-black shadow-[0_0_10px_rgba(0,255,135,0.5)] ${captainBump > 0 ? "animate-badge-pop" : ""}`
+                                  ? `bg-gaffer-electric text-gaffer-black shadow-[0_0_10px_rgba(34, 197, 141,0.5)] ${captainBump > 0 ? "animate-badge-pop" : ""}`
                                   : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"
                               }`}
                               key={`c-${p.id}-${isCapt ? captainBump : 0}`}
@@ -438,14 +438,14 @@ export default function SquadSetupPage() {
             <div
               className="absolute inset-0"
               style={{
-                background: "radial-gradient(circle at center, rgba(0,255,135,0.4) 0%, transparent 50%)",
+                background: "radial-gradient(circle at center, rgba(34, 197, 141,0.4) 0%, transparent 50%)",
                 animation: "portal-bloom 1000ms cubic-bezier(0.23, 1, 0.32, 1) forwards",
               }}
             />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <div
                 className="font-display text-gaffer-electric text-7xl tracking-[0.15em]"
-                style={{ textShadow: "0 0 60px rgba(0,255,135,0.7)", animation: "portal-text 1000ms cubic-bezier(0.23, 1, 0.32, 1) forwards", opacity: 0 }}
+                style={{ textShadow: "0 0 60px rgba(34, 197, 141,0.7)", animation: "portal-text 1000ms cubic-bezier(0.23, 1, 0.32, 1) forwards", opacity: 0 }}
               >
                 LOCKED
               </div>

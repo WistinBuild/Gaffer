@@ -50,10 +50,10 @@ const RARITY_TOKENS: Record<
   },
   ICON: {
     gradient: "from-[#001A10] via-[#00B566] to-[#000A05]",
-    accent: "#7CFFC4",
-    glow: "shadow-[0_12px_60px_-10px_rgba(0,255,135,0.8)]",
+    accent: "#7FE3C0",
+    glow: "shadow-[0_12px_60px_-10px_rgba(34, 197, 141,0.8)]",
     label: "Icon",
-    text: "text-[#C7FFE0]",
+    text: "text-[#CFF3E5]",
   },
 };
 
@@ -231,7 +231,7 @@ function PlayerCardInner({
               className="pointer-events-none absolute inset-0 opacity-30 mix-blend-color-dodge"
               style={{
                 background:
-                  "conic-gradient(from 0deg at 30% 40%, rgba(0,255,135,0.4), rgba(212,175,55,0.3), rgba(124,255,196,0.4), rgba(212,175,55,0.2), rgba(0,255,135,0.4))",
+                  "conic-gradient(from 0deg at 30% 40%, rgba(34, 197, 141,0.4), rgba(212,175,55,0.3), rgba(124,255,196,0.4), rgba(212,175,55,0.2), rgba(34, 197, 141,0.4))",
                 animation: "icon-foil 8s linear infinite",
               }}
             />
@@ -297,7 +297,7 @@ function PlayerCardInner({
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30">
               <div
                 className="rounded-full px-2.5 py-1 font-mono text-[9px] tracking-[0.2em] font-bold
-                  bg-gaffer-electric text-gaffer-black shadow-[0_0_18px_rgba(0,255,135,0.7)]"
+                  bg-gaffer-electric text-gaffer-black shadow-[0_0_18px_rgba(34, 197, 141,0.7)]"
               >
                 C
               </div>

@@ -32,7 +32,7 @@ const RARITY_TIERS = [
   { tier: "BRONZE", min: 0,   accent: "#E0A668" },
   { tier: "SILVER", min: 30,  accent: "#E5E5E5" },
   { tier: "GOLD",   min: 80,  accent: "#F5D26C" },
-  { tier: "ICON",   min: 150, accent: "#7CFFC4" },
+  { tier: "ICON",   min: 150, accent: "#7FE3C0" },
 ];
 
 const FAQ = [
@@ -202,7 +202,7 @@ export default function RulesPage() {
                           <div key={action} className="flex items-center justify-between py-2 border-b border-white/5 last:border-b-0">
                             <span className="text-white/70 text-sm">{action}</span>
                             <span className={`font-display text-xl tabular-nums ${isNeg ? "text-gaffer-red" : "text-gaffer-electric"}`}
-                              style={{ textShadow: isNeg ? undefined : "0 0 12px rgba(0,255,135,0.2)" }}>
+                              style={{ textShadow: isNeg ? undefined : "0 0 12px rgba(34, 197, 141,0.2)" }}>
                               {pts}
                             </span>
                           </div>

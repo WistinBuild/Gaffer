@@ -55,7 +55,7 @@ export function PitchSplash() {
       aria-label="Loading the pitch"
       style={{
         background:
-          "radial-gradient(circle at center, rgba(0,40,28,0.85) 0%, rgba(8,11,15,0.97) 60%, #080B0F 100%)",
+          "radial-gradient(circle at center, rgba(0,40,28,0.85) 0%, rgba(8,11,15,0.97) 60%, #0B0E14 100%)",
         opacity: fading ? 0 : 1,
         transition: "opacity 480ms cubic-bezier(0.4,0,0.2,1)",
       }}
@@ -65,7 +65,7 @@ export function PitchSplash() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(0,255,135,0.18) 0%, transparent 50%)",
+            "radial-gradient(circle at center, rgba(34, 197, 141,0.18) 0%, transparent 50%)",
           animation: "splash-bloom 2.4s ease-in-out infinite",
         }}
       />
@@ -75,7 +75,7 @@ export function PitchSplash() {
         <div
           className="absolute inset-0 rounded-full blur-3xl"
           style={{
-            background: "radial-gradient(circle, rgba(0,255,135,0.55) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(34, 197, 141,0.55) 0%, transparent 70%)",
             transform: "scale(1.4)",
             animation: "splash-pulse 1.8s ease-in-out infinite",
           }}
@@ -88,7 +88,7 @@ export function PitchSplash() {
           style={{
             animation: "splash-float 3.2s ease-in-out infinite",
             boxShadow:
-              "0 20px 60px -10px rgba(0,255,135,0.4), 0 8px 24px rgba(0,0,0,0.55)",
+              "0 20px 60px -10px rgba(34, 197, 141,0.4), 0 8px 24px rgba(0,0,0,0.55)",
           }}
         />
       </div>
@@ -97,7 +97,7 @@ export function PitchSplash() {
       <div
         className="relative mt-10 font-display text-white text-3xl sm:text-4xl tracking-[0.18em]"
         style={{
-          textShadow: "0 0 30px rgba(0,255,135,0.45)",
+          textShadow: "0 0 30px rgba(34, 197, 141,0.45)",
           animation: "splash-text 1.6s ease-in-out infinite",
         }}
       >

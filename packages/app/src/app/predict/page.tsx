@@ -490,7 +490,7 @@ function PickTile({ flag, label, pct, onClick, muted }: { flag?: string; label: 
       <div className="absolute inset-y-0 left-0 transition-all duration-700 ease-out-strong"
         style={{
           width: `${pct}%`,
-          background: muted ? "linear-gradient(to right, rgba(255,255,255,0.05), transparent)" : "linear-gradient(to right, rgba(0,255,135,0.15), rgba(0,255,135,0.02))",
+          background: muted ? "linear-gradient(to right, rgba(255,255,255,0.05), transparent)" : "linear-gradient(to right, rgba(34, 197, 141,0.15), rgba(34, 197, 141,0.02))",
         }} />
       <div className="relative">
         <div className="font-mono text-[8px] tracking-[0.22em] text-white/40 uppercase">{pct}%</div>
@@ -517,7 +517,7 @@ function NoveltyCard({ question, yes, sub, onYes, onNo }: { question: string; ye
 
         {/* YES / NO bar */}
         <div className="mt-5 rounded-full h-2.5 overflow-hidden bg-white/[0.04] hairline flex">
-          <div className="bg-gaffer-electric/60" style={{ width: `${yes}%`, boxShadow: "0 0 10px rgba(0,255,135,0.3)" }} />
+          <div className="bg-gaffer-electric/60" style={{ width: `${yes}%`, boxShadow: "0 0 10px rgba(34, 197, 141,0.3)" }} />
           <div className="bg-gaffer-red/60" style={{ width: `${no}%` }} />
         </div>
 
@@ -580,7 +580,7 @@ function BankrollPanel({ bankroll, onReset }: { bankroll: number; onReset: () =>
       <div className="rounded-[calc(1rem-1.5px)] bg-gaffer-black/70 backdrop-blur-sm hairline inner-glow px-5 py-3 flex items-center gap-4">
         <div>
           <div className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Demo bankroll</div>
-          <div className="font-display text-4xl text-gaffer-electric tabular-nums leading-none mt-1" style={{ textShadow: "0 0 18px rgba(0,255,135,0.45)" }}>
+          <div className="font-display text-4xl text-gaffer-electric tabular-nums leading-none mt-1" style={{ textShadow: "0 0 18px rgba(34, 197, 141,0.45)" }}>
             {bankroll.toFixed(1)}
             <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1.5">ETH</span>
           </div>

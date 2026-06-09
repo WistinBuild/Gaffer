@@ -6,7 +6,7 @@ import { MusicPlayer } from "@/components/ui/MusicPlayer";
 import { PitchSplash } from "@/components/ui/PitchSplash";
 
 export const viewport: Viewport = {
-  themeColor: "#080B0F",
+  themeColor: "#0B0E14",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,

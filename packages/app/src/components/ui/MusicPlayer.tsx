@@ -167,7 +167,7 @@ export function MusicPlayer() {
                 key={i}
                 className="w-[3px] rounded-full"
                 style={{
-                  background: i % 2 === 0 ? "#D4AF37" : "#00FF87",
+                  background: i % 2 === 0 ? "#D4AF37" : "#22C58D",
                   animation: playing && !muted
                     ? `eq-bar-${i} ${0.6 + i * 0.1}s ease-in-out infinite`
                     : "none",

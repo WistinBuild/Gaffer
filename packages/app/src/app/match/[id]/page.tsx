@@ -369,7 +369,7 @@ export default function MatchPage() {
                         {d.success ? "✓" : "✗"}
                       </span>
                       <span className="text-white/55">{DECISION_LIBRARY.find((t) => t.id === d.decisionId)?.options.find((o) => o.id === d.optionId)?.label}</span>
-                      <span className="ml-auto tabular-nums" style={{ color: d.success ? "#7CFFC4" : "#FF6B6B" }}>
+                      <span className="ml-auto tabular-nums" style={{ color: d.success ? "#7FE3C0" : "#FF6B6B" }}>
                         {d.success ? "+" : ""}{d.pointsScored}
                       </span>
                     </div>
@@ -392,7 +392,7 @@ function Scoreboard({ state, synergies }: { state: MatchState; synergies: number
       <div className="rounded-[calc(2rem-1.5px)] bg-gaffer-black/80 backdrop-blur-md hairline inner-glow px-6 py-5 grid grid-cols-3 items-center">
         <div className="text-center">
           <div className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">You</div>
-          <div className="font-display text-7xl text-gaffer-electric tabular-nums leading-none animate-scoreboard" style={{ textShadow: "0 0 24px rgba(0,255,135,0.4)" }}>
+          <div className="font-display text-7xl text-gaffer-electric tabular-nums leading-none animate-scoreboard" style={{ textShadow: "0 0 24px rgba(34, 197, 141,0.4)" }}>
             {String(state.yourScore).padStart(2, "0")}
           </div>
         </div>
@@ -430,7 +430,7 @@ function MomentumBar({ momentum }: { momentum: number }) {
       <div className="h-1.5 rounded-full bg-white/10 overflow-hidden relative">
         <div className="absolute inset-0 flex">
           <div className="bg-gaffer-red/60" style={{ width: `${100 - pct}%` }} />
-          <div className="bg-gaffer-electric/60" style={{ width: `${pct}%`, boxShadow: "0 0 10px rgba(0,255,135,0.3)" }} />
+          <div className="bg-gaffer-electric/60" style={{ width: `${pct}%`, boxShadow: "0 0 10px rgba(34, 197, 141,0.3)" }} />
         </div>
       </div>
     </div>
@@ -454,7 +454,7 @@ function PlayerStatus({ ps, isCaptain, isActive }: { ps: PlayerMatchState; isCap
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2 font-mono text-[10px]">
         <StatBar label="STA" value={ps.stamina} max={100} color="#F5D26C" />
-        <StatBar label="COM" value={ps.composure} max={20}  color="#7CFFC4" />
+        <StatBar label="COM" value={ps.composure} max={20}  color="#7FE3C0" />
       </div>
     </div>
   );
@@ -507,7 +507,7 @@ function LivePulse({ state }: { state: MatchState }) {
 
 function ResultFlash({ result }: { result: { success: boolean; pts: number; oppPts: number; label: string; banner: DecisionOutcome["banner"] } }) {
   const color =
-    result.banner.tone === "good" ? "#7CFFC4" :
+    result.banner.tone === "good" ? "#7FE3C0" :
     result.banner.tone === "bad"  ? "#FF6B6B" : "#F5D26C";
   return (
     <div className="rounded-2xl p-1.5 animate-hot-edge" style={{ background: `linear-gradient(135deg, ${color}55, transparent)` }}>
@@ -522,7 +522,7 @@ function ResultFlash({ result }: { result: { success: boolean; pts: number; oppP
         <div className="flex items-center justify-center gap-6">
           {result.pts !== 0 && (
             <div>
-              <div className="font-display text-5xl tabular-nums leading-none" style={{ color: result.pts > 0 ? "#7CFFC4" : "#FF6B6B", textShadow: `0 0 18px ${color}33` }}>
+              <div className="font-display text-5xl tabular-nums leading-none" style={{ color: result.pts > 0 ? "#7FE3C0" : "#FF6B6B", textShadow: `0 0 18px ${color}33` }}>
                 {result.pts > 0 ? "+" : ""}{result.pts}
               </div>
               <div className="font-mono text-[9px] tracking-[0.22em] text-white/45 uppercase mt-1">You</div>
@@ -530,7 +530,7 @@ function ResultFlash({ result }: { result: { success: boolean; pts: number; oppP
           )}
           {result.oppPts > 0 && (
             <div>
-              <div className="font-display text-5xl text-gaffer-red tabular-nums leading-none" style={{ textShadow: "0 0 18px rgba(255,59,59,0.4)" }}>
+              <div className="font-display text-5xl text-gaffer-red tabular-nums leading-none" style={{ textShadow: "0 0 18px rgba(226, 85, 99,0.4)" }}>
                 +{result.oppPts}
               </div>
               <div className="font-mono text-[9px] tracking-[0.22em] text-white/45 uppercase mt-1">Them</div>
@@ -615,7 +615,7 @@ function DecisionPanel({
                 <div className="absolute inset-y-0 left-0 transition-all duration-700"
                   style={{
                     width: `${probs[i]}%`,
-                    background: probs[i] > 60 ? "linear-gradient(to right, rgba(0,255,135,0.18), rgba(0,255,135,0.02))"
+                    background: probs[i] > 60 ? "linear-gradient(to right, rgba(34, 197, 141,0.18), rgba(34, 197, 141,0.02))"
                               : probs[i] > 35 ? "linear-gradient(to right, rgba(212,175,55,0.18), rgba(212,175,55,0.02))"
                                               : "linear-gradient(to right, rgba(255,107,107,0.18), rgba(255,107,107,0.02))",
                   }}
@@ -650,7 +650,7 @@ function DecisionPanel({
                   ) : (
                     <>
                       <div className="font-display text-3xl tabular-nums leading-none" style={{
-                        color: probs[i] > 60 ? "#7CFFC4" : probs[i] > 35 ? "#F5D26C" : "#FF6B6B",
+                        color: probs[i] > 60 ? "#7FE3C0" : probs[i] > 35 ? "#F5D26C" : "#FF6B6B",
                       }}>
                         {probs[i]}%
                       </div>
@@ -685,7 +685,7 @@ function FullTimeConfetti() {
         x: (i * 137.5) % 100,
         delay: (i % 7) * 0.12,
         dur: 2.4 + (i % 5) * 0.35,
-        color: ["#D4AF37", "#00FF87", "#FFFFFF", "#F5D26C", "#7CFFC4"][i % 5],
+        color: ["#D4AF37", "#22C58D", "#FFFFFF", "#F5D26C", "#7FE3C0"][i % 5],
       })),
     [],
   );
@@ -793,7 +793,7 @@ function CompletePanel({ state, warId, isRealWar, onContinue }: { state: MatchSt
   }
 
   const verdictColor = won ? "text-gaffer-electric" : drew ? "text-white" : "text-gaffer-red";
-  const verdictGlow  = won ? "0 0 60px rgba(0,255,135,0.6)" : drew ? "0 0 30px rgba(255,255,255,0.3)" : "0 0 40px rgba(255,107,107,0.5)";
+  const verdictGlow  = won ? "0 0 60px rgba(34, 197, 141,0.6)" : drew ? "0 0 30px rgba(255,255,255,0.3)" : "0 0 40px rgba(255,107,107,0.5)";
   const verdictText  = won ? "VICTORY" : drew ? "DRAW" : "DEFEAT";
 
   return (
@@ -804,7 +804,7 @@ function CompletePanel({ state, warId, isRealWar, onContinue }: { state: MatchSt
       <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/80 hairline inner-glow p-10 text-center relative">
         {/* White-out flash when whistle blows */}
         <div className="absolute inset-0 pointer-events-none rounded-[calc(2rem-0.375rem)]" style={{
-          background: won ? "rgba(0,255,135,0.45)" : drew ? "rgba(255,255,255,0.35)" : "rgba(255,107,107,0.4)",
+          background: won ? "rgba(34, 197, 141,0.45)" : drew ? "rgba(255,255,255,0.35)" : "rgba(255,107,107,0.4)",
           opacity: revealStage === "flash" ? 1 : 0,
           transition: "opacity 700ms cubic-bezier(0.4,0,0.2,1)",
         }} />

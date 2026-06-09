@@ -219,14 +219,14 @@ function renderMeta(e: FeedEvent): {
       const isIcon = e.toTier === "ICON";
       return {
         tag: "FORGED",
-        dotColor: isIcon ? "#7CFFC4" : "#F5D26C",
+        dotColor: isIcon ? "#7FE3C0" : "#F5D26C",
         body: (
           <>
             <HoverWord glow="gold">{e.manager}</HoverWord>'s{" "}
             <HoverWord glow={isIcon ? "electric" : "gold"}>{pick(e.player!).shortName}</HoverWord>{" "}
             forged <span className="text-white/40">{e.fromTier}</span>{" "}
             <span className="text-white/60">→</span>{" "}
-            <span style={{ color: isIcon ? "#7CFFC4" : "#F5D26C" }}>{e.toTier}</span>
+            <span style={{ color: isIcon ? "#7FE3C0" : "#F5D26C" }}>{e.toTier}</span>
           </>
         ),
       };
@@ -234,7 +234,7 @@ function renderMeta(e: FeedEvent): {
     case "war_resolved": {
       return {
         tag: "RESOLVED",
-        dotColor: "#00FF87",
+        dotColor: "#22C58D",
         body: (
           <>
             <HoverWord glow="electric">{e.manager}</HoverWord> beat{" "}
@@ -243,7 +243,7 @@ function renderMeta(e: FeedEvent): {
           </>
         ),
         right: e.amount,
-        rightColor: "#00FF87",
+        rightColor: "#22C58D",
       };
     }
     case "war_accepted": {
@@ -275,14 +275,14 @@ function renderMeta(e: FeedEvent): {
     case "big_stake": {
       return {
         tag: "WHALE",
-        dotColor: "#FF3B3B",
+        dotColor: "#E25563",
         body: (
           <>
             <HoverWord glow="red">{e.manager}</HoverWord> dropped a heavy stake
           </>
         ),
         right: `${e.amount} ETH`,
-        rightColor: "#FF3B3B",
+        rightColor: "#E25563",
       };
     }
     case "minted": {

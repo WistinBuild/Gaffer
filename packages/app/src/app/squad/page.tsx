@@ -249,7 +249,7 @@ export default function SquadBuilderPage() {
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
                     isReady
-                      ? "bg-gaffer-electric shadow-[0_0_8px_rgba(0,255,135,0.8)]"
+                      ? "bg-gaffer-electric shadow-[0_0_8px_rgba(34, 197, 141,0.8)]"
                       : "bg-white/40"
                   }`}
                 />
@@ -280,7 +280,7 @@ export default function SquadBuilderPage() {
                         </div>
                         <div className="font-display text-3xl text-white mt-1 tabular-nums">
                           <span className={isReady ? "text-gaffer-electric" : ""}
-                            style={isReady ? { textShadow: "0 0 16px rgba(0,255,135,0.4)" } : undefined}>
+                            style={isReady ? { textShadow: "0 0 16px rgba(34, 197, 141,0.4)" } : undefined}>
                             {animFilledCount}
                           </span>
                           <span className="text-white/30"> / 5</span>
@@ -319,7 +319,7 @@ export default function SquadBuilderPage() {
                                 key={i}
                                 className="absolute h-1.5 w-1.5 rounded-sm"
                                 style={{
-                                  background: i % 3 === 0 ? "#00FF87" : i % 3 === 1 ? "#D4AF37" : "#FFFFFF",
+                                  background: i % 3 === 0 ? "#22C58D" : i % 3 === 1 ? "#D4AF37" : "#FFFFFF",
                                   ["--cx" as any]: `${Math.cos(angle) * dist}px`,
                                   ["--cy" as any]: `${Math.sin(angle) * dist}px`,
                                   animation: `confetti-up 1100ms cubic-bezier(0.23, 1, 0.32, 1) forwards`,
@@ -595,7 +595,7 @@ function AlreadyMintedPanel() {
     <div className="rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
       <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/60 hairline inner-glow p-12 text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-gaffer-electric/10 text-gaffer-electric px-3 py-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-gaffer-electric shadow-[0_0_8px_rgba(0,255,135,0.8)]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-gaffer-electric shadow-[0_0_8px_rgba(34, 197, 141,0.8)]" />
           <span className="font-mono text-[11px] tracking-[0.2em] uppercase">Squad already minted</span>
         </div>
         <h2 className="mt-6 font-display text-white text-5xl sm:text-6xl">

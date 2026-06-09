@@ -26,8 +26,8 @@ html {
 }
 
 body {
-  background-color: #080b0f;
-  color: #ffffff;
+  background-color: #0b0e14;
+  color: #eef1f5;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -42,9 +42,9 @@ body::before {
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(212, 175, 55, 0.08), transparent 60%),
-    radial-gradient(ellipse 50% 35% at 85% 30%, rgba(0, 255, 135, 0.06), transparent 60%),
-    radial-gradient(ellipse 70% 50% at 50% 95%, rgba(26, 71, 49, 0.25), transparent 70%);
+    radial-gradient(ellipse 60% 40% at 18% 8%, rgba(212, 175, 55, 0.045), transparent 62%),
+    radial-gradient(ellipse 55% 38% at 88% 26%, rgba(34, 197, 141, 0.04), transparent 62%),
+    radial-gradient(ellipse 80% 55% at 50% 100%, rgba(21, 57, 43, 0.18), transparent 72%);
   pointer-events: none;
 }
 
@@ -55,7 +55,7 @@ body::after {
   inset: 0;
   z-index: -1;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-  opacity: 0.035;
+  opacity: 0.02;
   pointer-events: none;
   mix-blend-mode: overlay;
 }
@@ -68,16 +68,16 @@ body::after {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(212, 175, 55, 0.2);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 175, 55, 0.6);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(212, 175, 55, 0.3);
+  background: rgba(34, 197, 141, 0.28);
   color: #ffffff;
 }
 
@@ -147,8 +147,8 @@ body::after {
 
 /* Pulsing live indicator */
 @keyframes live-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,59,59,0.6); }
-  50%      { opacity: 0.6; box-shadow: 0 0 0 8px rgba(255,59,59,0); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(226, 85, 99,0.6); }
+  50%      { opacity: 0.6; box-shadow: 0 0 0 8px rgba(226, 85, 99,0); }
 }
 
 /* Big number flicker — CRT scoreboard energy */
@@ -163,8 +163,8 @@ body::after {
 
 /* Hot edge pulse — for featured cards */
 @keyframes hot-edge {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(0,255,135,0.4), 0 0 24px rgba(0,255,135,0.15); }
-  50%      { box-shadow: 0 0 0 1px rgba(0,255,135,0.8), 0 0 40px rgba(0,255,135,0.45); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(34, 197, 141,0.4), 0 0 24px rgba(34, 197, 141,0.15); }
+  50%      { box-shadow: 0 0 0 1px rgba(34, 197, 141,0.8), 0 0 40px rgba(34, 197, 141,0.45); }
 }
 
 /* Slot fill — when a player drops into a squad slot */
@@ -198,8 +198,8 @@ body::after {
 
 /* Ready ring — full-circle glow when squad complete */
 @keyframes ready-ring {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,135,0.6), inset 0 0 0 1px rgba(0,255,135,0.5); }
-  50%      { box-shadow: 0 0 0 12px rgba(0,255,135,0), inset 0 0 0 1px rgba(0,255,135,0.9); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 141,0.6), inset 0 0 0 1px rgba(34, 197, 141,0.5); }
+  50%      { box-shadow: 0 0 0 12px rgba(34, 197, 141,0), inset 0 0 0 1px rgba(34, 197, 141,0.9); }
 }
 
 /* Sweep — gold light passing across a button */
@@ -290,14 +290,14 @@ body::after {
 .hover-word { transition: transform 300ms var(--ease-out), text-shadow 300ms var(--ease-out), color 200ms; cursor: default; }
 .hover-word:hover { transform: translateY(-3px); }
 .hover-word-gold:hover     { text-shadow: 0 0 30px rgba(212,175,55,0.6); }
-.hover-word-electric:hover { text-shadow: 0 0 28px rgba(0,255,135,0.55); }
+.hover-word-electric:hover { text-shadow: 0 0 28px rgba(34, 197, 141,0.55); }
 .hover-word-white:hover    { text-shadow: 0 0 22px rgba(255,255,255,0.35); }
-.hover-word-red:hover      { text-shadow: 0 0 24px rgba(255,59,59,0.5); }
+.hover-word-red:hover      { text-shadow: 0 0 24px rgba(226, 85, 99,0.5); }
 
 /* Letter-wave: lift each char in sequence on parent hover */
 .letter-wave:hover > span { transform: translateY(calc(var(--lift, 8px) * -1)); }
 .letter-wave[data-glow="gold"]:hover > span     { text-shadow: 0 0 22px rgba(212,175,55,0.55); }
-.letter-wave[data-glow="electric"]:hover > span { text-shadow: 0 0 22px rgba(0,255,135,0.55); }
+.letter-wave[data-glow="electric"]:hover > span { text-shadow: 0 0 22px rgba(34, 197, 141,0.55); }
 .letter-wave[data-glow="white"]:hover > span    { text-shadow: 0 0 18px rgba(255,255,255,0.35); }
 
 /* Tactile lift for any chip/stat block */
@@ -361,7 +361,7 @@ body::after {
     background: linear-gradient(135deg, rgba(212,175,55,0.18) 0%, transparent 55%);
   }
   .floodlight-right {
-    background: linear-gradient(225deg, rgba(0,255,135,0.14) 0%, transparent 55%);
+    background: linear-gradient(225deg, rgba(34, 197, 141,0.14) 0%, transparent 55%);
   }
   .animate-float-slow {
     animation: float-bob 5s ease-in-out infinite;

@@ -21,7 +21,7 @@ export default async function OpenGraphImage() {
           justifyContent: "space-between",
           padding: "72px 80px",
           background:
-            "linear-gradient(135deg, #080B0F 0%, #0d1218 50%, #07101a 100%)",
+            "linear-gradient(135deg, #0B0E14 0%, #0d1218 50%, #07101a 100%)",
           color: "#ffffff",
           fontFamily: "system-ui, -apple-system, sans-serif",
           position: "relative",
@@ -49,7 +49,7 @@ export default async function OpenGraphImage() {
             width: 700,
             height: 700,
             background:
-              "radial-gradient(circle, rgba(0,255,135,0.18) 0%, transparent 60%)",
+              "radial-gradient(circle, rgba(34, 197, 141,0.18) 0%, transparent 60%)",
             display: "flex",
           }}
         />
@@ -121,7 +121,7 @@ export default async function OpenGraphImage() {
             <span style={{ color: "rgba(255,255,255,0.3)" }}>·</span>
             <span style={{ color: "#D4AF37" }}>BATTLE</span>
             <span style={{ color: "rgba(255,255,255,0.3)" }}>·</span>
-            <span style={{ color: "#00FF87" }}>EARN</span>
+            <span style={{ color: "#22C58D" }}>EARN</span>
           </div>
         </div>
 

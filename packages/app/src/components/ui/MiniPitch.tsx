@@ -224,7 +224,7 @@ export function MiniPitch({
         const color =
           d.team === "you"
             ? d.isCaptain
-              ? "#00FF87"
+              ? "#22C58D"
               : "#F5D26C"
             : d.team === "ai"
               ? "#A9885A"
@@ -295,7 +295,7 @@ export function MiniPitch({
       {/* Legend (bottom) */}
       <div className="absolute bottom-2 left-3 flex items-center gap-4 font-mono text-[9px] tracking-[0.18em] uppercase text-white/45">
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-gaffer-electric" style={{ boxShadow: "0 0 6px #00FF87" }} />
+          <span className="h-2 w-2 rounded-full bg-gaffer-electric" style={{ boxShadow: "0 0 6px #22C58D" }} />
           Captain
         </span>
         <span className="flex items-center gap-1.5">
@@ -341,7 +341,7 @@ function CelebrationOverlay({ celebration }: { celebration: NonNullable<Celebrat
     save:        "SAVED",
   }[celebration.type];
 
-  const color = isGood ? "#00FF87" : isPenalty ? "#FF3B3B" : "#FF6B6B";
+  const color = isGood ? "#22C58D" : isPenalty ? "#E25563" : "#FF6B6B";
   const subtext = celebration.label ?? "";
 
   return (
@@ -366,7 +366,7 @@ function CelebrationOverlay({ celebration }: { celebration: NonNullable<Celebrat
                 top: "50%",
                 width: 4 + (i % 3),
                 height: 4 + (i % 3),
-                background: i % 3 === 0 ? "#00FF87" : i % 3 === 1 ? "#F5D26C" : "#FFFFFF",
+                background: i % 3 === 0 ? "#22C58D" : i % 3 === 1 ? "#F5D26C" : "#FFFFFF",
                 animation: `confetti-${i % 4} 1400ms cubic-bezier(0.23, 1, 0.32, 1) forwards`,
                 animationDelay: `${i * 25}ms`,
               }}

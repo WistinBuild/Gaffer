@@ -308,7 +308,7 @@ function Confetti() {
         x: (i * 137.5) % 100,
         delay: (i % 6) * 0.15,
         dur: 2.2 + (i % 4) * 0.4,
-        color: ["#D4AF37", "#00FF87", "#FFFFFF", "#F5D26C"][i % 4],
+        color: ["#D4AF37", "#22C58D", "#FFFFFF", "#F5D26C"][i % 4],
       })),
     [],
   );

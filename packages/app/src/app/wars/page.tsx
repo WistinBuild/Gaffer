@@ -607,7 +607,7 @@ function ActiveWarCard({
                     onClick={() => onCaptain(isCapt ? null : idx)}
                     className={`px-2 py-1 rounded-full font-mono text-[9px] tracking-[0.18em] font-bold transition-all duration-150 ease-out-strong active:scale-95 ${
                       isCapt
-                        ? "bg-gaffer-electric text-gaffer-black shadow-[0_0_12px_rgba(0,255,135,0.5)]"
+                        ? "bg-gaffer-electric text-gaffer-black shadow-[0_0_12px_rgba(34, 197, 141,0.5)]"
                         : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"
                     }`}
                   >

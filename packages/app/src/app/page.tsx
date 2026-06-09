@@ -99,7 +99,7 @@ export default function Portal() {
               <div className="reveal sm:translate-x-[8vw] bg-gradient-to-r from-gaffer-gold via-[#FBE9A5] to-gaffer-gold bg-clip-text text-transparent" style={{ ["--stagger-delay" as any]: "200ms" }}>
                 <LetterWave text="BATTLE." glow="gold" charDelay={30} liftPx={14} />
               </div>
-              <div className="reveal text-gaffer-electric" style={{ ["--stagger-delay" as any]: "300ms", textShadow: "0 0 40px rgba(0,255,135,0.4)" }}>
+              <div className="reveal text-gaffer-electric" style={{ ["--stagger-delay" as any]: "300ms", textShadow: "0 0 40px rgba(34, 197, 141,0.4)" }}>
                 <LetterWave text="EARN." glow="electric" charDelay={35} liftPx={14} />
               </div>
             </h1>
@@ -282,7 +282,7 @@ export default function Portal() {
                     </div>
                     <span className="font-mono text-xs tabular-nums text-white/80">{m.win_rate}%</span>
                   </div>
-                  <div className="col-span-2 sm:col-span-2 text-right font-display text-2xl tabular-nums text-gaffer-electric" style={{ textShadow: "0 0 16px rgba(0,255,135,0.25)" }}>
+                  <div className="col-span-2 sm:col-span-2 text-right font-display text-2xl tabular-nums text-gaffer-electric" style={{ textShadow: "0 0 16px rgba(34, 197, 141,0.25)" }}>
                     {m.profit}
                     <span className="font-mono text-[10px] tracking-[0.2em] text-white/40 ml-1">ETH</span>
                   </div>
@@ -304,7 +304,7 @@ export default function Portal() {
           </div>
           <h2 className="reveal mt-8 font-display text-[22vw] sm:text-[18vw] lg:text-[15rem] leading-[0.82] tracking-wide text-white" style={{ ["--stagger-delay" as any]: "120ms" }}>
             <LetterWave text="GAME" glow="white" charDelay={40} liftPx={20} />
-            <span className="inline-block ml-4 sm:ml-8 text-gaffer-electric" style={{ textShadow: "0 0 60px rgba(0,255,135,0.5)" }}>
+            <span className="inline-block ml-4 sm:ml-8 text-gaffer-electric" style={{ textShadow: "0 0 60px rgba(34, 197, 141,0.5)" }}>
               <LetterWave text="ON." glow="electric" charDelay={50} liftPx={20} />
             </span>
           </h2>
@@ -505,7 +505,7 @@ function WarRoomRow({ challenger, stake, matchday, minsLeft, featured, captain, 
 }
 
 function ForgedCard({ player, from, to, reason, at }: { player: Player; from: "BRONZE" | "SILVER" | "GOLD" | "ICON"; to: "BRONZE" | "SILVER" | "GOLD" | "ICON"; reason: string; at: string }) {
-  const toColor = to === "ICON" ? "#7CFFC4" : to === "GOLD" ? "#F5D26C" : to === "SILVER" ? "#E5E5E5" : "#E0A668";
+  const toColor = to === "ICON" ? "#7FE3C0" : to === "GOLD" ? "#F5D26C" : to === "SILVER" ? "#E5E5E5" : "#E0A668";
   return (
     <div className="rounded-2xl p-[1.5px] hover-lift bg-gradient-to-br from-white/15 via-white/5 to-transparent">
       <div className="h-full rounded-[calc(1rem-1.5px)] bg-gaffer-surface/70 hairline inner-glow p-4 relative overflow-hidden">

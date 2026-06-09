@@ -59,7 +59,7 @@ export function ConnectButton() {
           hover:bg-white/10"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gaffer-electric/15 ring-1 ring-gaffer-electric/40">
-          <span className="h-2 w-2 rounded-full bg-gaffer-electric shadow-[0_0_8px_rgba(0,255,135,0.8)]" />
+          <span className="h-2 w-2 rounded-full bg-gaffer-electric shadow-[0_0_8px_rgba(34, 197, 141,0.8)]" />
         </span>
         <span className="font-mono text-xs tracking-tight text-white/90">
           {truncate(address)}
