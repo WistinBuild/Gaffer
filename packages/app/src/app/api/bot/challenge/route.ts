@@ -4,6 +4,7 @@ import {
   getPublic,
   getBotWallet,
   getBotAccount,
+  writeWithRetry,
   CONTRACT_ADDRESSES,
   SQUAD_WARS_ABI,
   GAFFER_NFT_ABI,
@@ -50,14 +51,12 @@ export async function POST(req: NextRequest) {
     })) as boolean;
 
     if (!hasMinted) {
-      const mintHash = await wallet.writeContract({
+      result.mintTxHash = await writeWithRetry(pub, wallet, {
         address: CONTRACT_ADDRESSES.gafferNFT,
         abi: GAFFER_NFT_ABI,
         functionName: "mintSquad",
         args: [BOT_SQUAD_PLAYER_IDS, BOT_SQUAD_POSITIONS],
-      });
-      await pub.waitForTransactionReceipt({ hash: mintHash });
-      result.mintTxHash = mintHash;
+      }, "mintSquad");
     }
 
     // 2. Approve the protocol to pull the bot's USDC stake (if needed)
@@ -68,35 +67,31 @@ export async function POST(req: NextRequest) {
       args: [botAddr, CONTRACT_ADDRESSES.squadWars],
     })) as bigint;
     if (allowance < stake) {
-      const approveHash = await wallet.writeContract({
+      result.approveTxHash = await writeWithRetry(pub, wallet, {
         address: USDC_ADDRESS,
         abi: USDC_ABI,
         functionName: "approve",
         args: [CONTRACT_ADDRESSES.squadWars, stake],
-      });
-      await pub.waitForTransactionReceipt({ hash: approveHash });
-      result.approveTxHash = approveHash;
+      }, "approve");
     }
 
-    // 3. Accept war (escrows matching USDC stake)
-    const acceptHash = await wallet.writeContract({
+    // 3. Accept war (escrows matching USDC stake) — retries if the approve
+    //    above hasn't propagated to the simulating node yet.
+    result.acceptTxHash = await writeWithRetry(pub, wallet, {
       address: CONTRACT_ADDRESSES.squadWars,
       abi: SQUAD_WARS_ABI,
       functionName: "acceptWar",
       args: [warId],
-    });
-    await pub.waitForTransactionReceipt({ hash: acceptHash });
-    result.acceptTxHash = acceptHash;
+    }, "acceptWar");
 
-    // 4. Lock bot decision — slot 4 captain, slot 3 bench
-    const lockHash = await wallet.writeContract({
+    // 4. Lock bot decision — slot 4 captain, slot 3 bench — retries until the
+    //    accepted war is visible as Active.
+    result.lockTxHash = await writeWithRetry(pub, wallet, {
       address: CONTRACT_ADDRESSES.squadWars,
       abi: SQUAD_WARS_ABI,
       functionName: "lockDecision",
       args: [warId, 4, 3],
-    });
-    await pub.waitForTransactionReceipt({ hash: lockHash });
-    result.lockTxHash = lockHash;
+    }, "lockDecision");
 
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

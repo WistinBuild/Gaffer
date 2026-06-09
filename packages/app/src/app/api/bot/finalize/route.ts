@@ -3,6 +3,7 @@ import { type Address } from "viem";
 import {
   getPublic,
   getBotWallet,
+  writeWithRetry,
   CONTRACT_ADDRESSES,
   SQUAD_WARS_ABI,
   GAFFER_NFT_ABI,
@@ -149,26 +150,23 @@ export async function POST(req: NextRequest) {
         yellows.push(0); reds.push(0); played.push(true);
       }
 
-      const postHash = await wallet.writeContract({
+      result.postTxHash = await writeWithRetry(pub, wallet, {
         address: CONTRACT_ADDRESSES.oracle,
         abi: ORACLE_ABI,
         functionName: "postMatchdayResults",
         args: [matchday, playerIds, goals, assists, cleanSheets, yellows, reds, played],
-      });
-      await pub.waitForTransactionReceipt({ hash: postHash });
-      result.postTxHash = postHash;
+      }, "postMatchdayResults");
     }
 
     // ─── Resolve war → winner gets pot ───────────────────────────────────
-    const resolveHash = await wallet.writeContract({
+    // Retries until the matchday-finalized state from the post above is visible.
+    const resolveHash = await writeWithRetry(pub, wallet, {
       address: CONTRACT_ADDRESSES.squadWars,
       abi: SQUAD_WARS_ABI,
       functionName: "resolveWar",
       args: [warId],
-    });
-    const receipt = await pub.waitForTransactionReceipt({ hash: resolveHash });
+    }, "resolveWar");
     result.resolveTxHash = resolveHash;
-    result.resolveBlockNumber = receipt.blockNumber.toString();
 
     // Re-read final state
     const finalWar = (await pub.readContract({

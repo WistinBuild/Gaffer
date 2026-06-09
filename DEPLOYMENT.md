@@ -44,7 +44,7 @@ long-lived Node process. Vercel is the lowest-friction fit for this stack.
 | Var | Scope | Notes |
 |-----|-------|-------|
 | `NEXT_PUBLIC_CHAIN_ID` | public | `84532` Base Sepolia / `8453` Base mainnet |
-| `NEXT_PUBLIC_RPC_URL` | public | **Use Alchemy/QuickNode** — the public RPC is flaky |
+| `RPC_URL` | **secret** | server-only RPC for metadata routes (ZAN/Alchemy) — embeds an API key, never prefix NEXT_PUBLIC |
 | `NEXT_PUBLIC_ORACLE_ADDRESS` | public | from deploy output |
 | `NEXT_PUBLIC_NFT_ADDRESS` | public | |
 | `NEXT_PUBLIC_SQUAD_WARS_ADDRESS` | public | |
