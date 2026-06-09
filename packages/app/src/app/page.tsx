@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -6,31 +8,22 @@ import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
+import { useAllWars, useLeaderboard, shortAddr, type ChainWar } from "@/lib/onchain";
+import { fromUSDC } from "@/lib/usdc";
+import { zeroAddress as ZERO } from "viem";
 
 const players = playersData as Player[];
 const pick = (id: string) => players.find((p) => p.id === id)!;
 
-// ─── Mock live data (replace with chain reads in Stage 4) ─────────────────────
-const MARQUEE_ITEMS = [
-  { label: "MD3", value: "VINICIUS · 24 PTS", accent: "gold" },
-  { label: "MD3", value: "BELLINGHAM · 18 PTS", accent: "white" },
-  { label: "MD3", value: "MBAPPÉ · 31 PTS ⚡", accent: "electric" },
-  { label: "LIVE", value: "8 WARS ACTIVE", accent: "red" },
-  { label: "POT", value: "0.48 USDC STAKED", accent: "gold" },
-  { label: "MD3", value: "KANE · 22 PTS", accent: "white" },
-  { label: "NEW", value: "+ICON · VINICIUS JR.", accent: "electric" },
-  { label: "MD4", value: "KICK-OFF IN 14h 22m", accent: "gold" },
-  { label: "LIVE", value: "1,247 MANAGERS ONLINE", accent: "electric" },
-  { label: "MD3", value: "VAN DIJK · 16 PTS", accent: "white" },
+// ─── Non-numeric marquee copy (no fabricated values) ──────────────────────────
+const MARQUEE_BASE: { label: string; value: string; accent: string }[] = [
+  { label: "GAFFER", value: "DRAFT · BATTLE · EARN", accent: "gold" },
+  { label: "LIVE", value: "WORLD CUP 2026 · BASE", accent: "electric" },
+  { label: "FORGE", value: "BRONZE BECOMES ICON", accent: "gold" },
+  { label: "STAKE", value: "95% TO WINNERS", accent: "white" },
 ];
 
-const WAR_ROOM = [
-  { challenger: "0x4a7…dE12",    stake: "0.05", matchday: 4, minsLeft: 842, featured: true,  captain: "mbappe",     opp: "bellingham" },
-  { challenger: "Cristiano21",   stake: "0.10", matchday: 4, minsLeft: 842, featured: false, captain: "vinicius",   opp: "kane" },
-  { challenger: "0x9c1…7Fa3",    stake: "0.02", matchday: 4, minsLeft: 842, featured: false, captain: "saka",       opp: "musiala" },
-  { challenger: "tikitaka.eth",  stake: "0.25", matchday: 4, minsLeft: 842, featured: false, captain: "rodri",      opp: "modric" },
-];
-
+// ─── Tournament path — real game config (stage point multipliers) ─────────────
 const STAGES = [
   { code: "GROUP", mult: "1.0×", note: "MD 1–3", here: true },
   { code: "R16",   mult: "1.2×", note: "MD 4–5", here: false },
@@ -39,29 +32,34 @@ const STAGES = [
   { code: "FINAL", mult: "3.0×", note: "MD 8",   here: false },
 ];
 
-const LEADERBOARD = [
-  { rank: 1, name: "elGoatManager", w: 12, l: 1, win_rate: 92, profit: "+1.84" },
-  { rank: 2, name: "0x4a7…dE12",    w: 11, l: 3, win_rate: 79, profit: "+1.42" },
-  { rank: 3, name: "tikitaka.eth",  w: 10, l: 4, win_rate: 71, profit: "+0.98" },
-  { rank: 4, name: "Cristiano21",   w:  9, l: 5, win_rate: 64, profit: "+0.51" },
-  { rank: 5, name: "0x9c1…7Fa3",    w:  8, l: 5, win_rate: 62, profit: "+0.33" },
-];
-
-const FORGED_THIS_WEEK = [
-  { id: "vinicius",   from: "GOLD",   to: "ICON",   reason: "31 pts vs France",        at: "2h ago" },
-  { id: "saka",       from: "SILVER", to: "GOLD",   reason: "Hat-trick MD3",            at: "6h ago" },
-  { id: "ruben_dias", from: "SILVER", to: "GOLD",   reason: "Clean sheet + assist",     at: "9h ago" },
-  { id: "musiala",    from: "GOLD",   to: "ICON",   reason: "MD3 MOTM",                 at: "1d ago" },
-];
-
-const SQUAD_OF_WEEK = ["alisson", "van_dijk", "rodri", "bellingham", "mbappe"];
+// Open wars = status 0, active = 1.
+const isLiveWar = (w: ChainWar) => w.status === 0 || w.status === 1;
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function Portal() {
+  const { wars } = useAllWars();
+  const { rows: leaderRows } = useLeaderboard();
+
+  const liveWars = wars.filter(isLiveWar);
+  const warsNow = liveWars.length;
+  const totalStaked = liveWars.reduce((sum, w) => sum + fromUSDC(w.stake), 0);
+  const totalStakedLabel = `${totalStaked.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC`;
+
+  // Build the live ticker from real data where available, otherwise neutral copy.
+  const marqueeItems = [
+    ...(warsNow > 0
+      ? [{ label: "LIVE", value: `${warsNow} WARS ACTIVE`, accent: "red" }]
+      : []),
+    ...(totalStaked > 0
+      ? [{ label: "POT", value: `${totalStakedLabel} STAKED`, accent: "gold" }]
+      : []),
+    ...MARQUEE_BASE,
+  ];
+
   return (
     <main className="relative min-h-[100dvh] overflow-x-hidden">
       {/* ═══ BROADCAST TICKER ════════════════════════════════════════ */}
-      <BroadcastTicker />
+      <BroadcastTicker items={marqueeItems} />
 
       {/* ═══ HERO ARENA — VS face-off ════════════════════════════════ */}
       <section className="relative pt-24 pb-24 sm:pt-32 sm:pb-32 px-4 sm:px-8">
@@ -71,10 +69,8 @@ export default function Portal() {
         <div className="pointer-events-none absolute inset-0 -z-10 scanlines opacity-40" />
         <Particles count={12} />
 
-        <HudChip position="top-left"     label="MD 4 · KICKOFF" value="14:22:11" tone="gold" />
-        <HudChip position="top-right"    label="MANAGERS ONLINE" value="1,247"   tone="electric" />
-        <HudChip position="bottom-left"  label="STAKED · WK"    value="48.2 USDC" tone="white" />
-        <HudChip position="bottom-right" label="WARS NOW"       value="08"       tone="red" />
+        <HudChip position="bottom-left"  label="STAKED"   value={totalStakedLabel}            tone="white" />
+        <HudChip position="bottom-right" label="WARS NOW" value={String(warsNow).padStart(2, "0")} tone="red" />
 
         <div className="relative mx-auto max-w-7xl">
           {/* Wordmark */}
@@ -148,34 +144,30 @@ export default function Portal() {
         <div className="relative mx-auto max-w-7xl">
           <SectionHeader
             eyebrow={<><LiveDot /> WAR ROOM · TONIGHT</>}
-            title={<><LetterWave text="Eight wars open." glow="white" charDelay={15} liftPx={6} /><br/><span className="text-gaffer-electric"><LetterWave text="Pick your fight." glow="electric" charDelay={18} liftPx={6} /></span></>}
+            title={<><LetterWave text="Wars are open." glow="white" charDelay={15} liftPx={6} /><br/><span className="text-gaffer-electric"><LetterWave text="Pick your fight." glow="electric" charDelay={18} liftPx={6} /></span></>}
             right={<Link href="/wars" className="font-mono text-[12px] tracking-[0.2em] uppercase text-white/60 hover:text-gaffer-gold transition-colors hover-word hover-word-gold">Browse all →</Link>}
           />
           <div className="mt-10 space-y-3">
-            {WAR_ROOM.map((w, i) => (
-              <div key={i} className="reveal" style={{ ["--stagger-delay" as any]: `${i * 80}ms` }}>
-                <WarRoomRow {...w} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ FORGED THIS WEEK ════════════════════════════════════════ */}
-      <section className="relative px-4 sm:px-8 py-24 sm:py-32">
-        <Backdrop src={FOOTBALL_IMAGERY.boot} opacity={0.14} blur={4} overlay="strong" blend="luminosity" />
-        <div className="relative mx-auto max-w-7xl">
-          <SectionHeader
-            eyebrow={<><span className="text-gaffer-electric">▲</span> FORGED THIS WEEK</>}
-            title={<><LetterWave text="Bronze cards" glow="white" charDelay={20} liftPx={8} /><br/><span className="text-gaffer-gold"><LetterWave text="become legends." glow="gold" charDelay={22} liftPx={8} /></span></>}
-            right={<p className="font-mono text-[11px] tracking-[0.2em] text-white/40 max-w-[28ch] text-right uppercase">Every fantasy point you earn<br/>compounds onto your NFT — permanent.</p>}
-          />
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
-            {FORGED_THIS_WEEK.map((f, i) => (
-              <div key={f.id} className="reveal" style={{ ["--stagger-delay" as any]: `${i * 80}ms` }}>
-                <ForgedCard player={pick(f.id)} from={f.from as any} to={f.to as any} reason={f.reason} at={f.at} />
-              </div>
-            ))}
+            {liveWars.length === 0 ? (
+              <EmptyState
+                title="No active wars yet"
+                sub="Be the first to open a war and stake your squad."
+                href="/wars"
+                cta="Start a war"
+              />
+            ) : (
+              liveWars.map((w, i) => (
+                <div key={String(w.id)} className="reveal" style={{ ["--stagger-delay" as any]: `${i * 80}ms` }}>
+                  <WarRoomRow
+                    challenger={shortAddr(w.challenger)}
+                    opponent={w.opponent === ZERO ? null : shortAddr(w.opponent)}
+                    stake={fromUSDC(w.stake).toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                    matchday={Number(w.matchday)}
+                    featured={i === 0}
+                  />
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -202,38 +194,6 @@ export default function Portal() {
         </div>
       </section>
 
-      {/* ═══ SQUAD OF THE WEEK ══════════════════════════════════════ */}
-      <section className="relative px-4 sm:px-8 py-24 sm:py-32">
-        <Backdrop src={FOOTBALL_IMAGERY.pitchAerial} opacity={0.12} blur={1} overlay="strong" blend="overlay" />
-        <div className="relative mx-auto max-w-7xl">
-          <SectionHeader
-            eyebrow={<>⌘ SQUAD OF THE WEEK</>}
-            title={<><LetterWave text="elGoatManager's" glow="gold" charDelay={18} liftPx={6} /><br/><span className="text-white"><LetterWave text="undefeated five." glow="white" charDelay={20} liftPx={6} /></span></>}
-            right={<div className="text-right space-y-1"><div className="font-mono text-[10px] tracking-[0.2em] text-white/40 uppercase">Record this week</div><div className="font-display text-3xl text-gaffer-electric tabular-nums">5–0</div><div className="font-mono text-[10px] tracking-[0.2em] text-gaffer-gold/80 uppercase">+0.42 USDC</div></div>}
-          />
-          <div className="mt-12 rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
-            <div className="rounded-[calc(2rem-0.375rem)] bg-gradient-to-b from-gaffer-pitch/30 via-gaffer-surface/50 to-gaffer-black hairline inner-glow p-6 sm:p-10 relative overflow-hidden">
-              <div className="pointer-events-none absolute inset-8 rounded-2xl border border-gaffer-electric/10" />
-              <div className="pointer-events-none absolute left-1/2 top-8 bottom-8 w-px bg-gaffer-electric/10" />
-              <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border border-gaffer-electric/10" />
-              <div className="relative flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-                {SQUAD_OF_WEEK.map((id, i) => {
-                  const p = pick(id);
-                  const rarity = id === "mbappe" ? "ICON" : (id === "van_dijk" || id === "bellingham" || id === "rodri") ? "GOLD" : "SILVER";
-                  const isCapt = id === "mbappe";
-                  const rot = [-6, 3, -2, 4, -3][i];
-                  return (
-                    <div key={id} style={{ transform: `rotate(${rot}deg)` }}>
-                      <PlayerCard player={p} rarity={rarity as any} size="sm" isCaptain={isCapt} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ═══ LIVE LEADERBOARD ══════════════════════════════════════ */}
       <section className="relative px-4 sm:px-8 py-24 sm:py-32">
         <Backdrop src={FOOTBALL_IMAGERY.goldenHour} opacity={0.2} blur={4} overlay="strong" blend="luminosity" />
@@ -247,47 +207,48 @@ export default function Portal() {
             <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/60 backdrop-blur-sm hairline inner-glow overflow-hidden">
               <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 font-mono text-[10px] tracking-[0.2em] text-white/30 uppercase border-b border-white/5">
                 <div className="col-span-1">#</div>
-                <div className="col-span-5">Manager</div>
-                <div className="col-span-2 text-right">W / L</div>
-                <div className="col-span-2 text-right">Win rate</div>
-                <div className="col-span-2 text-right">Profit</div>
+                <div className="col-span-9">Manager</div>
+                <div className="col-span-2 text-right">Wins</div>
               </div>
-              {LEADERBOARD.map((m, i) => (
-                <div key={m.rank} className="reveal grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-4 px-6 py-5 items-center border-b border-white/5 last:border-b-0 hover-lift hover:bg-white/[0.02]" style={{ ["--stagger-delay" as any]: `${i * 70}ms` }}>
-                  <div className="col-span-1 flex items-center gap-2">
-                    {m.rank === 1 ? (
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gaffer-gold text-gaffer-black animate-hot-edge">
-                        <Crown />
-                      </span>
-                    ) : (
-                      <span className="font-display text-2xl text-white/40 tabular-nums">{String(m.rank).padStart(2, "0")}</span>
-                    )}
-                  </div>
-                  <div className="col-span-1 sm:col-span-5">
-                    <div className={`font-semibold ${m.rank === 1 ? "text-gaffer-gold font-display text-2xl tracking-wide" : "text-white text-base"}`}>
-                      <HoverWord glow={m.rank === 1 ? "gold" : "white"}>{m.name}</HoverWord>
-                    </div>
-                    {m.rank === 1 && (
-                      <div className="font-mono text-[10px] tracking-[0.2em] text-gaffer-gold/70 uppercase mt-0.5">Reigning champion</div>
-                    )}
-                  </div>
-                  <div className="col-span-1 sm:col-span-2 text-right font-mono">
-                    <span className="text-gaffer-electric tabular-nums">{m.w}</span>
-                    <span className="text-white/30 mx-1">/</span>
-                    <span className="text-gaffer-red tabular-nums">{m.l}</span>
-                  </div>
-                  <div className="hidden sm:flex sm:col-span-2 justify-end items-center gap-2">
-                    <div className="w-16 h-1 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-gaffer-electric to-gaffer-gold" style={{ width: `${m.win_rate}%` }} />
-                    </div>
-                    <span className="font-mono text-xs tabular-nums text-white/80">{m.win_rate}%</span>
-                  </div>
-                  <div className="col-span-2 sm:col-span-2 text-right font-display text-2xl tabular-nums text-gaffer-electric" style={{ textShadow: "0 0 16px rgba(34, 197, 141,0.25)" }}>
-                    {m.profit}
-                    <span className="font-mono text-[10px] tracking-[0.2em] text-white/40 ml-1">USDC</span>
-                  </div>
+              {leaderRows.length === 0 ? (
+                <div className="px-6 py-16">
+                  <EmptyState
+                    title="No managers ranked yet"
+                    sub="Win your first war to climb the board."
+                    href="/wars"
+                    cta="Find a war"
+                  />
                 </div>
-              ))}
+              ) : (
+                leaderRows.map((m, i) => {
+                  const rank = i + 1;
+                  return (
+                    <div key={m.manager} className="reveal grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-4 px-6 py-5 items-center border-b border-white/5 last:border-b-0 hover-lift hover:bg-white/[0.02]" style={{ ["--stagger-delay" as any]: `${i * 70}ms` }}>
+                      <div className="col-span-1 flex items-center gap-2">
+                        {rank === 1 ? (
+                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gaffer-gold text-gaffer-black animate-hot-edge">
+                            <Crown />
+                          </span>
+                        ) : (
+                          <span className="font-display text-2xl text-white/40 tabular-nums">{String(rank).padStart(2, "0")}</span>
+                        )}
+                      </div>
+                      <div className="col-span-1 sm:col-span-9">
+                        <div className={`font-semibold ${rank === 1 ? "text-gaffer-gold font-display text-2xl tracking-wide" : "text-white text-base"}`}>
+                          <HoverWord glow={rank === 1 ? "gold" : "white"}>{shortAddr(m.manager)}</HoverWord>
+                        </div>
+                        {rank === 1 && (
+                          <div className="font-mono text-[10px] tracking-[0.2em] text-gaffer-gold/70 uppercase mt-0.5">Reigning champion</div>
+                        )}
+                      </div>
+                      <div className="col-span-1 sm:col-span-2 text-right font-display text-2xl tabular-nums text-gaffer-electric" style={{ textShadow: "0 0 16px rgba(34, 197, 141,0.25)" }}>
+                        {m.wins}
+                        <span className="font-mono text-[10px] tracking-[0.2em] text-white/40 ml-1">WINS</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -300,7 +261,7 @@ export default function Portal() {
         <div className="relative mx-auto max-w-5xl text-center">
           <div className="reveal inline-flex items-center gap-2 rounded-full bg-gaffer-red/15 hairline px-3 py-1 hover-lift" style={{ ["--stagger-delay" as any]: "0ms" }}>
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-gaffer-red animate-live-dot" />
-            <span className="font-mono text-[10px] tracking-[0.22em] text-white/70 uppercase">MD4 — kickoff in 14h</span>
+            <span className="font-mono text-[10px] tracking-[0.22em] text-white/70 uppercase">{warsNow > 0 ? `${warsNow} wars live now` : "Wars open now"}</span>
           </div>
           <h2 className="reveal mt-8 font-display text-[22vw] sm:text-[18vw] lg:text-[15rem] leading-[0.82] tracking-wide text-white" style={{ ["--stagger-delay" as any]: "120ms" }}>
             <LetterWave text="GAME" glow="white" charDelay={40} liftPx={20} />
@@ -325,8 +286,8 @@ export default function Portal() {
 
 // ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
-function BroadcastTicker() {
-  const items = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS];
+function BroadcastTicker({ items: base }: { items: { label: string; value: string; accent: string }[] }) {
+  const items = [...base, ...base];
   return (
     <div className="fixed top-4 inset-x-4 sm:inset-x-8 z-30">
       <div className="rounded-full p-[1.5px] bg-white/[0.04] hairline-strong overflow-hidden">
@@ -451,9 +412,7 @@ function SectionHeader({ eyebrow, title, right }: { eyebrow: React.ReactNode; ti
   );
 }
 
-function WarRoomRow({ challenger, stake, matchday, minsLeft, featured, captain, opp }: { challenger: string; stake: string; matchday: number; minsLeft: number; featured: boolean; captain: string; opp: string }) {
-  const hrs = Math.floor(minsLeft / 60);
-  const mins = minsLeft % 60;
+function WarRoomRow({ challenger, opponent, stake, matchday, featured }: { challenger: string; opponent: string | null; stake: string; matchday: number; featured: boolean }) {
   return (
     <div className={`group relative rounded-2xl p-[1.5px] hover-lift ${featured ? "bg-gradient-to-r from-gaffer-gold/60 via-white/10 to-gaffer-electric/40" : "bg-white/[0.04] hairline-strong"}`}>
       <div className="rounded-[calc(1rem-1.5px)] bg-gaffer-surface/70 hairline inner-glow backdrop-blur-sm px-4 sm:px-6 py-4 sm:py-5 grid grid-cols-2 md:grid-cols-12 gap-3 md:gap-6 items-center">
@@ -461,18 +420,7 @@ function WarRoomRow({ challenger, stake, matchday, minsLeft, featured, captain, 
           <span className="font-mono text-[9px] tracking-[0.2em] text-white/40">MD</span>
           <span className="font-display text-3xl text-white leading-none tabular-nums">{matchday}</span>
         </div>
-        <div className="col-span-1 md:col-span-2">
-          <div className="flex items-center gap-3">
-            <img src={`/players/${pick(captain).id}.png`} alt="" className="h-12 w-12 rounded-full object-cover bg-gaffer-pitch ring-1 ring-gaffer-gold/40 transition-transform duration-300 ease-out-strong group-hover:scale-110" style={{ filter: "drop-shadow(0 4px 12px rgba(212,175,55,0.3))" }} draggable={false} />
-            <div>
-              <div className="font-mono text-[9px] tracking-[0.18em] text-gaffer-gold/70 uppercase">Captain</div>
-              <div className="font-semibold text-sm text-white truncate max-w-[14ch]">
-                <HoverWord glow="gold">{pick(captain).shortName}</HoverWord>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-span-1 md:col-span-3">
+        <div className="col-span-1 md:col-span-4">
           <div className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase">Challenger</div>
           <div className="font-semibold text-sm text-white truncate"><HoverWord glow="white">{challenger}</HoverWord></div>
           {featured && (
@@ -481,19 +429,18 @@ function WarRoomRow({ challenger, stake, matchday, minsLeft, featured, captain, 
             </div>
           )}
         </div>
-        <div className="hidden md:flex col-span-2 items-center justify-center gap-2">
+        <div className="hidden md:flex col-span-3 items-center justify-center gap-2 min-w-0">
           <span className="font-display text-2xl text-white/30">vs</span>
-          <img src={`/players/${pick(opp).id}.png`} alt="" className="h-9 w-9 rounded-full object-cover bg-gaffer-pitch ring-1 ring-white/15 opacity-70 transition-opacity duration-300 group-hover:opacity-100" draggable={false} />
+          <div className="min-w-0">
+            <div className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase">Opponent</div>
+            <div className="font-semibold text-sm text-white/80 truncate"><HoverWord glow="white">{opponent ?? "Open seat"}</HoverWord></div>
+          </div>
         </div>
         <div className="col-span-1 md:col-span-2 text-right md:text-center">
           <div className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase">Stake</div>
           <div className="font-display text-2xl text-gaffer-gold tabular-nums leading-none mt-0.5">{stake}<span className="font-mono text-[10px] tracking-[0.15em] text-white/40 ml-1">USDC</span></div>
         </div>
         <div className="col-span-2 md:col-span-2 flex items-center justify-end gap-3">
-          <div className="hidden md:flex flex-col items-end">
-            <span className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase">KO IN</span>
-            <span className="font-mono text-sm text-white tabular-nums">{hrs}h {String(mins).padStart(2,"0")}m</span>
-          </div>
           <Link href="/wars" className="group/btn inline-flex items-center gap-2 rounded-full bg-white/5 hairline px-4 py-2 text-white/85 transition-transform duration-150 ease-out-strong active:scale-[0.97] hover:bg-gaffer-gold hover:text-gaffer-black">
             <span className="font-semibold text-xs tracking-wider">ACCEPT</span>
             <Arrow size={12} />
@@ -504,25 +451,16 @@ function WarRoomRow({ challenger, stake, matchday, minsLeft, featured, captain, 
   );
 }
 
-function ForgedCard({ player, from, to, reason, at }: { player: Player; from: "BRONZE" | "SILVER" | "GOLD" | "ICON"; to: "BRONZE" | "SILVER" | "GOLD" | "ICON"; reason: string; at: string }) {
-  const toColor = to === "ICON" ? "#7FE3C0" : to === "GOLD" ? "#F5D26C" : to === "SILVER" ? "#E5E5E5" : "#E0A668";
+function EmptyState({ title, sub, href, cta }: { title: string; sub: string; href: string; cta: string }) {
   return (
-    <div className="rounded-2xl p-[1.5px] hover-lift bg-gradient-to-br from-white/15 via-white/5 to-transparent">
-      <div className="h-full rounded-[calc(1rem-1.5px)] bg-gaffer-surface/70 hairline inner-glow p-4 relative overflow-hidden">
-        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl" style={{ background: `${toColor}33` }} />
-        <div className="relative flex items-center gap-3">
-          <img src={`/players/${player.id}.png`} alt={player.name} className="h-14 w-14 rounded-full object-cover bg-gaffer-pitch ring-2" style={{ borderColor: toColor, boxShadow: `0 0 16px ${toColor}66` }} draggable={false} />
-          <div className="min-w-0">
-            <div className="font-display text-lg text-white leading-none truncate"><HoverWord glow={to === "ICON" ? "electric" : "gold"}>{player.shortName}</HoverWord></div>
-            <div className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase mt-1">{at}</div>
-          </div>
-        </div>
-        <div className="relative mt-3 flex items-center gap-2 font-mono text-[10px] tracking-[0.15em] uppercase">
-          <span className="text-white/40">{from}</span>
-          <Arrow size={10} />
-          <span style={{ color: toColor }}>{to}</span>
-        </div>
-        <div className="relative mt-2 text-[12px] text-white/65 leading-snug">{reason}</div>
+    <div className="reveal rounded-2xl p-[1.5px] bg-white/[0.04] hairline-strong">
+      <div className="rounded-[calc(1rem-1.5px)] bg-gaffer-surface/70 hairline inner-glow backdrop-blur-sm px-6 py-12 flex flex-col items-center text-center gap-4">
+        <div className="font-display text-2xl sm:text-3xl text-white/85 leading-none">{title}</div>
+        <p className="font-mono text-[11px] tracking-[0.18em] text-white/40 uppercase max-w-[32ch]">{sub}</p>
+        <Link href={href} className="group inline-flex items-center gap-2 rounded-full bg-white/5 hairline px-4 py-2 text-white/85 transition-transform duration-150 ease-out-strong active:scale-[0.97] hover:bg-gaffer-gold hover:text-gaffer-black">
+          <span className="font-semibold text-xs tracking-wider">{cta}</span>
+          <Arrow size={12} />
+        </Link>
       </div>
     </div>
   );

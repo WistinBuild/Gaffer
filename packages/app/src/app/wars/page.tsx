@@ -567,8 +567,32 @@ function ActiveWarCard({
   const stakeUSDC = fromUSDC(war.stake);
   const potUSDC = stakeUSDC * 2;
 
-  // We don't read each player's NFT here yet; show 5 slot placeholders + names from mock squad as visual stand-in
-  const placeholderSquad = ["alisson", "van_dijk", "rodri", "bellingham", "mbappe"];
+  // Read the connected manager's real on-chain squad — the slots they pick captain/bench from.
+  const { address } = useAccount();
+  const { data: squadTokens } = useReadContract({
+    address: CONTRACT_ADDRESSES.gafferNFT,
+    abi: GAFFER_NFT_ABI,
+    functionName: "getSquad",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && hasContracts },
+  });
+  const { data: squadCards } = useReadContracts({
+    contracts: ((squadTokens as readonly bigint[] | undefined) ?? []).map((t) => ({
+      address: CONTRACT_ADDRESSES.gafferNFT,
+      abi: GAFFER_NFT_ABI,
+      functionName: "getCard" as const,
+      args: [t] as const,
+    })),
+    query: { enabled: !!squadTokens },
+  });
+  const squad = useMemo(() => {
+    const labels = ["BRONZE", "SILVER", "GOLD", "ICON"] as const;
+    if (!squadCards) return [] as { id: string; rarity: (typeof labels)[number] }[];
+    return squadCards
+      .map((c) => (c.status === "success" ? (c.result as { playerId: string; rarity: number }) : null))
+      .filter((c): c is { playerId: string; rarity: number } => !!c && !!c.playerId)
+      .map((c) => ({ id: c.playerId, rarity: labels[c.rarity] ?? "BRONZE" }));
+  }, [squadCards]);
 
   return (
     <div className="mt-8 rounded-[2rem] p-1.5 bg-gradient-to-r from-gaffer-gold/60 via-white/10 to-gaffer-electric/40 animate-hot-edge">
@@ -603,7 +627,8 @@ function ActiveWarCard({
         </p>
 
         <div className="mt-6 grid grid-cols-5 gap-3">
-          {placeholderSquad.map((id, idx) => {
+          {squad.map((card, idx) => {
+            const id = card.id;
             const isCapt = captainSlot === idx;
             const isBench = benchedSlot === idx;
             return (
@@ -611,7 +636,7 @@ function ActiveWarCard({
                 <div onClick={() => { if (isCapt) onCaptain(null); else onCaptain(idx); if (isBench) onBench(null); }} className="cursor-pointer">
                   <PlayerCard
                     player={pick(id)}
-                    rarity={id === "mbappe" ? "ICON" : ["van_dijk","bellingham","rodri"].includes(id) ? "GOLD" : "SILVER"}
+                    rarity={card.rarity}
                     size="sm"
                     isCaptain={isCapt}
                     isBenched={isBench}

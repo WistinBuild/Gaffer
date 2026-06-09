@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { zeroAddress } from "viem";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { HoverWord, LetterWave } from "@/components/ui/HoverText";
@@ -9,6 +10,8 @@ import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
+import { useAllWars, shortAddr, hasContracts, type ChainWar } from "@/lib/onchain";
+import { fromUSDC } from "@/lib/usdc";
 
 const players = playersData as Player[];
 const pick = (id: string) => players.find((p) => p.id === id)!;
@@ -18,7 +21,7 @@ type EventType = "war_created" | "war_accepted" | "war_resolved" | "forged" | "m
 interface FeedEvent {
   id: string;
   type: EventType;
-  at: string; // relative time
+  at: string; // honest label (no fabricated relative time)
   manager: string;
   manager2?: string;
   player?: string;
@@ -29,36 +32,72 @@ interface FeedEvent {
   reason?: string;
 }
 
-const FEED: FeedEvent[] = [
-  { id: "e1",  type: "forged",       at: "12s ago", manager: "elGoatManager", player: "vinicius",   fromTier: "GOLD",   toTier: "ICON",   reason: "31 pts vs France" },
-  { id: "e2",  type: "big_stake",    at: "47s ago", manager: "0x4a7…dE12",     amount: "0.50" },
-  { id: "e3",  type: "war_resolved", at: "1m ago",  manager: "elGoatManager",  manager2: "0x4a7…dE12", score: "92–64", amount: "+0.095" },
-  { id: "e4",  type: "war_accepted", at: "2m ago",  manager: "tikitaka.eth",   manager2: "Cristiano21", amount: "0.10" },
-  { id: "e5",  type: "war_created",  at: "3m ago",  manager: "0x9c1…7Fa3",     amount: "0.02" },
-  { id: "e6",  type: "minted",       at: "5m ago",  manager: "iniestaCR" },
-  { id: "e7",  type: "forged",       at: "6m ago",  manager: "Cristiano21",    player: "saka",       fromTier: "SILVER", toTier: "GOLD",   reason: "Hat-trick MD3" },
-  { id: "e8",  type: "war_resolved", at: "8m ago",  manager: "tikitaka.eth",   manager2: "0x71a…99c0", score: "78–61", amount: "+0.05" },
-  { id: "e9",  type: "war_created",  at: "11m ago", manager: "fcSamba",        amount: "0.08" },
-  { id: "e10", type: "big_stake",    at: "14m ago", manager: "0x33e…aaaa",     amount: "1.20" },
-  { id: "e11", type: "forged",       at: "18m ago", manager: "totalfutbol",    player: "musiala",    fromTier: "GOLD",   toTier: "ICON",   reason: "MD3 MOTM" },
-  { id: "e12", type: "war_accepted", at: "22m ago", manager: "elGoatManager",  manager2: "0x4a7…dE12", amount: "0.05" },
-  { id: "e13", type: "war_resolved", at: "26m ago", manager: "Cristiano21",    manager2: "iniestaCR", score: "44–67", amount: "+0.03" },
-  { id: "e14", type: "minted",       at: "32m ago", manager: "0x88c…4d21" },
-  { id: "e15", type: "forged",       at: "41m ago", manager: "tikitaka.eth",   player: "ruben_dias", fromTier: "SILVER", toTier: "GOLD",   reason: "Clean sheet + assist" },
-];
+// Build feed events from real on-chain wars (newest first).
+function eventsFromWars(wars: ChainWar[]): FeedEvent[] {
+  const sorted = [...wars].sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+  const events: FeedEvent[] = [];
+
+  for (const w of sorted) {
+    const id = Number(w.id);
+    const md = Number(w.matchday);
+
+    // status === 2 → resolved
+    if (w.status === 2) {
+      const draw = w.winner === zeroAddress;
+      events.push({
+        id: `w${id}-resolved`,
+        type: "war_resolved",
+        at: `MD ${md}`,
+        manager: draw ? "Draw" : shortAddr(w.winner),
+        manager2: shortAddr(w.challenger === w.winner ? w.opponent : w.challenger),
+        score: `${w.challengerScore}–${w.opponentScore}`,
+      });
+    }
+
+    // status >= 1 → accepted / active / resolved
+    if (w.status >= 1) {
+      events.push({
+        id: `w${id}-accepted`,
+        type: "war_accepted",
+        at: `War #${id}`,
+        manager: shortAddr(w.challenger),
+        manager2: shortAddr(w.opponent),
+      });
+    }
+
+    // status >= 0 → exists / created
+    if (w.status >= 0) {
+      events.push({
+        id: `w${id}-created`,
+        type: "war_created",
+        at: `MD ${md}`,
+        manager: shortAddr(w.challenger),
+        amount: String(fromUSDC(w.stake)),
+      });
+    }
+  }
+
+  return events;
+}
 
 const FILTERS: { key: string; label: string; types: EventType[] }[] = [
   { key: "all",      label: "All",      types: [] },
   { key: "wars",     label: "Wars",     types: ["war_created", "war_accepted", "war_resolved"] },
-  { key: "forgings", label: "Forgings", types: ["forged"] },
-  { key: "stakes",   label: "Big stakes", types: ["big_stake"] },
-  { key: "mints",    label: "New squads", types: ["minted"] },
+  { key: "created",  label: "Posted",   types: ["war_created"] },
+  { key: "accepted", label: "Accepted", types: ["war_accepted"] },
+  { key: "resolved", label: "Resolved", types: ["war_resolved"] },
 ];
 
 export default function FeedPage() {
   const [filterKey, setFilterKey] = useState("all");
+  const { wars, isLoading } = useAllWars();
+
+  const feed = useMemo(() => eventsFromWars(wars), [wars]);
+
   const filter = FILTERS.find((f) => f.key === filterKey)!;
-  const filtered = filter.types.length === 0 ? FEED : FEED.filter((e) => filter.types.includes(e.type));
+  const filtered = filter.types.length === 0 ? feed : feed.filter((e) => filter.types.includes(e.type));
+
+  const showEmpty = !isLoading && feed.length === 0;
 
   return (
     <>
@@ -132,8 +171,30 @@ export default function FeedPage() {
             </div>
           </div>
 
-          {/* EMPTY STATE */}
-          {filtered.length === 0 && (
+          {/* EMPTY STATE — no on-chain activity */}
+          {showEmpty && (
+            <div className="rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
+              <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/60 hairline inner-glow p-12 text-center">
+                <div className="font-display text-white text-3xl">No on-chain activity yet.</div>
+                <p className="mt-2 text-white/55">
+                  {hasContracts
+                    ? "No wars have been posted on-chain yet. Be the first to start one."
+                    : "Connect to a network with deployed contracts to see live wars."}
+                </p>
+                <Link
+                  href="/wars"
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-gaffer-gold/15 hairline px-5 py-2
+                    text-gaffer-gold font-mono text-[11px] tracking-[0.18em] uppercase transition-colors duration-150 hover:bg-gaffer-gold/25"
+                >
+                  Start a war
+                  <Arrow size={12} />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* EMPTY STATE — filter has no matching events */}
+          {!showEmpty && filtered.length === 0 && (
             <div className="rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
               <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/60 hairline inner-glow p-12 text-center">
                 <div className="font-display text-white text-3xl">Quiet right now.</div>
@@ -232,10 +293,16 @@ function renderMeta(e: FeedEvent): {
       };
     }
     case "war_resolved": {
+      const isDraw = e.manager === "Draw";
       return {
         tag: "RESOLVED",
         dotColor: "#22C58D",
-        body: (
+        body: isDraw ? (
+          <>
+            War drawn · final{" "}
+            <span className="font-mono text-gaffer-electric">{e.score}</span>
+          </>
+        ) : (
           <>
             <HoverWord glow="electric">{e.manager}</HoverWord> beat{" "}
             <HoverWord glow="white">{e.manager2}</HoverWord> · final{" "}

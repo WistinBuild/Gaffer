@@ -131,6 +131,8 @@ export default function SquadSetupPage() {
   }, [cardResults]);
 
   const isUsingChainSquad = chainSquadIds.length === 5;
+  // FALLBACK_SQUAD_IDS is internal scaffolding only — it keeps the hooks below from
+  // crashing before the gate renders. It is never shown (see the gate before return).
   const SQUAD_IDS = isUsingChainSquad ? chainSquadIds : FALLBACK_SQUAD_IDS;
 
   // Enrich squad with full attributes
@@ -196,6 +198,14 @@ export default function SquadSetupPage() {
       sessionStorage.setItem(`match_setup_${warId}`, JSON.stringify(setup));
     }
     router.push(`/match/${warId}`);
+  }
+
+  // Gate: never render the scaffolding squad — show a real state until the
+  // manager's on-chain squad is loaded.
+  if (hasContracts) {
+    if (!address) return <SetupGate title="Connect your wallet" sub="Connect to load your squad and set up this war." />;
+    if (hasMinted === false) return <SetupGate title="No squad yet" sub="Mint your five-player squad before setting up a war." href="/squad" cta="Mint a squad" />;
+    if (!isUsingChainSquad) return <SetupGate title="Loading your squad…" sub="Reading your cards from the chain." />;
   }
 
   return (
@@ -573,5 +583,33 @@ function Arrow() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
       <path d="M7 17L17 7M17 7H8M17 7V16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function SetupGate({ title, sub, href, cta }: { title: string; sub: string; href?: string; cta?: string }) {
+  return (
+    <>
+      <Navbar />
+      <main className="relative min-h-[100dvh] flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="font-mono text-[10px] tracking-[0.32em] text-gaffer-gold/70 uppercase mb-3">War setup</div>
+          <h1 className="font-display text-4xl sm:text-5xl text-white leading-none">{title}</h1>
+          <p className="mt-4 text-white/55 text-sm">{sub}</p>
+          {href && cta && (
+            <Link
+              href={href}
+              className="inline-flex items-center gap-2 mt-7 rounded-full bg-gaffer-gold px-5 py-2.5
+                text-gaffer-black font-semibold text-sm transition-transform duration-150
+                ease-out-strong active:scale-[0.97] hover:bg-gaffer-gold-light"
+            >
+              {cta}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M7 17L17 7M17 7H8M17 7V16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          )}
+        </div>
+      </main>
+    </>
   );
 }
