@@ -267,6 +267,16 @@ describe("GAFFER — full function coverage", () => {
       await nft.connect(carol).mintSquad(PLAYERS, POS);
     });
 
+    it("setOracle swaps the Oracle (owner only, non-zero)", async () => {
+      const Oracle = await ethers.getContractFactory("Oracle");
+      const oracle2 = await Oracle.deploy();
+      await oracle2.waitForDeployment();
+      await expect(wars.connect(alice).setOracle(await oracle2.getAddress())).to.be.reverted;
+      await expect(wars.setOracle(ethers.ZeroAddress)).to.be.revertedWith("Zero oracle");
+      await wars.setOracle(await oracle2.getAddress());
+      expect(await wars.oracle()).to.equal(await oracle2.getAddress());
+    });
+
     it("adminCancelWar recovers a stuck Active war — refunds both sides (owner only)", async () => {
       await wars.connect(alice).createWar(99, STAKE); // matchday that will never finalize
       await wars.connect(bob).acceptWar(1);

@@ -53,15 +53,27 @@ describe("GAFFER Protocol", () => {
       expect(pts).to.equal(24n);
     });
 
-    it("applies stage multipliers", async () => {
+    it("applies the stage multiplier active when the matchday was finalized", async () => {
+      await oracle.advanceStage(2); // QuarterFinal = 1.5x
       await oracle.postMatchdayResults(
         1, ["bellingham"], [1], [0], [0], [0], [0], [true]
       );
-
-      await oracle.advanceStage(2); // QuarterFinal = 1.5x
       const pts = await oracle.calculatePoints(1, "bellingham", 2); // MID
       // 1 goal * 8 = 8, * 1.5x = 12
       expect(pts).to.equal(12n);
+    });
+
+    it("does NOT re-score a finalized matchday when the stage later advances", async () => {
+      // MD1 finalized at Group (1.0x)
+      await oracle.postMatchdayResults(
+        2, ["bellingham"], [1], [0], [0], [0], [0], [true]
+      );
+      // Stage advances afterward — must not retroactively inflate MD2.
+      await oracle.advanceStage(4); // Final = 3.0x
+      const pts = await oracle.calculatePoints(2, "bellingham", 2); // MID
+      // 1 goal * 8 = 8, still * 1.0x (Group, snapshotted) = 8 (not 24)
+      expect(pts).to.equal(8n);
+      expect(await oracle.multiplierForMatchday(2)).to.equal(100n);
     });
 
     it("returns 0 for players who did not play", async () => {

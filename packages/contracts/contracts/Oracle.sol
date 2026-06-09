@@ -26,6 +26,11 @@ contract Oracle is Ownable {
     uint256 public currentMatchday;
     mapping(uint256 => mapping(string => PlayerStats)) public results; // matchday => playerId => stats
     mapping(uint256 => bool) public matchdayFinalized;
+    // Stage a matchday was scored under, snapshotted at finalize time. Scoring
+    // reads THIS — not the live `currentStage` — so points are independent of
+    // when a war is resolved (a war resolved after advanceStage must not be
+    // re-scored at the new, higher multiplier).
+    mapping(uint256 => WorldCupStage) public matchdayStage;
 
     // Stage multipliers scaled by 100 (100 = 1.0x, 150 = 1.5x)
     mapping(WorldCupStage => uint256) public stageMultiplier;
@@ -76,6 +81,7 @@ contract Oracle is Ownable {
         }
 
         matchdayFinalized[matchday] = true;
+        matchdayStage[matchday] = currentStage; // snapshot for deterministic scoring
         if (matchday >= currentMatchday) {
             currentMatchday = matchday + 1;
         }
@@ -128,7 +134,14 @@ contract Oracle is Ownable {
 
         if (stats.redCards > 0) points = points > 4 ? points - 4 : 0;
 
-        // Apply stage multiplier
-        points = (points * stageMultiplier[currentStage]) / 100;
+        // Apply the multiplier snapshotted when the matchday was finalized, so
+        // scores don't drift if the global stage advances before a war resolves.
+        points = (points * stageMultiplier[matchdayStage[matchday]]) / 100;
+    }
+
+    /// @notice Stage multiplier that applies to a given (finalized) matchday.
+    ///         Frontends should read this instead of deriving a stage locally.
+    function multiplierForMatchday(uint256 matchday) external view returns (uint256) {
+        return stageMultiplier[matchdayStage[matchday]];
     }
 }

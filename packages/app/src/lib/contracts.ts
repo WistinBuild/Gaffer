@@ -64,6 +64,15 @@ export const ORACLE_ABI = [
     inputs: [],
     outputs: [{ name: "", type: "uint8" }],
   },
+  {
+    // Stage multiplier (x100) snapshotted when a matchday was finalized — read
+    // this instead of deriving the stage locally from the matchday number.
+    name: "multiplierForMatchday",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "matchday", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
 ] as const;
 
 // ─── GafferNFT ABI ────────────────────────────────────────────────────────────

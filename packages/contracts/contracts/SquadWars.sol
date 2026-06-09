@@ -55,10 +55,20 @@ contract SquadWars is Ownable, ReentrancyGuard {
     event WarResolved(uint256 indexed warId, address indexed winner, uint256 payout);
     event WarCancelled(uint256 indexed warId);
 
+    event OracleUpdated(address indexed oracle);
+
     constructor(address _oracle, address _nft, address _usdc) {
         oracle = Oracle(_oracle);
         nft    = GafferNFT(_nft);
         usdc   = IERC20(_usdc);
+    }
+
+    /// @notice Point this contract at a new Oracle (e.g. after an Oracle bugfix
+    ///         redeploy) without having to redeploy SquadWars and lose war history.
+    function setOracle(address _oracle) external onlyOwner {
+        require(_oracle != address(0), "Zero oracle");
+        oracle = Oracle(_oracle);
+        emit OracleUpdated(_oracle);
     }
 
     /// @notice Create a war. Caller must have approved `stake` USDC to this contract first.
