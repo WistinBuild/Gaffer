@@ -164,9 +164,8 @@ describe("GAFFER Protocol", () => {
       // Both squads have identical players so scores are equal — draw, both refunded
       expect(war.challengerScore).to.be.gt(0n);
       expect(war.challengerScore).to.equal(war.opponentScore);
-      // Draw refunds the pot minus the protocol fee; the fee is retained by the contract
-      const fee = (STAKE * 2n * 50n) / 1000n;
-      expect(await usdc.balanceOf(await squadWars.getAddress())).to.equal(fee);
+      // Draw refunds both sides and sweeps the fee to the owner — nothing is left stuck
+      expect(await usdc.balanceOf(await squadWars.getAddress())).to.equal(0n);
     });
 
     it("cancels an open war and refunds the USDC stake", async () => {

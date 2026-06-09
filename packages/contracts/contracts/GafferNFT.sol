@@ -133,6 +133,19 @@ contract GafferNFT is ERC721, Ownable {
         return _baseTokenURI;
     }
 
+    /// @dev Squad cards are soulbound — bound to the manager who minted them.
+    ///      Allowing transfers would desync the `squad` mapping from ownership
+    ///      and let a manager sell a squad mid-war while it still scores for them.
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 firstTokenId,
+        uint256 batchSize
+    ) internal override {
+        require(from == address(0), "Squad NFTs are soulbound");
+        super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
+    }
+
     function _calculateRarity(uint32 pts) internal pure returns (uint8) {
         if (pts >= 150) return ICON;
         if (pts >= 80)  return GOLD;

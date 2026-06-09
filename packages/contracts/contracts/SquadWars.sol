@@ -46,6 +46,9 @@ contract SquadWars is Ownable, ReentrancyGuard {
     address[] private _allManagers;
     mapping(address => bool) private _isManager;
 
+    // tokenId => matchday => whether this card's stats were already credited
+    mapping(uint256 => mapping(uint256 => bool)) private _credited;
+
     event WarCreated(uint256 indexed warId, address indexed challenger, uint256 stake, uint256 matchday);
     event WarAccepted(uint256 indexed warId, address indexed opponent);
     event DecisionLocked(uint256 indexed warId, address indexed manager, uint8 captain, uint8 benched);
@@ -139,6 +142,12 @@ contract SquadWars is Ownable, ReentrancyGuard {
             war.opponent, war.matchday, war.opponentCaptainSlot, war.opponentBenchedSlot
         );
 
+        // Persist each playing card's matchday stats + tournament points so
+        // rarity actually forges. Deduped per (token, matchday) so a manager
+        // with multiple wars on the same matchday is never double-credited.
+        _creditSquad(war.challenger, war.matchday, war.benchedSlot);
+        _creditSquad(war.opponent,   war.matchday, war.opponentBenchedSlot);
+
         uint256 totalPot  = war.stake * 2;
         uint256 fee       = (totalPot * PROTOCOL_FEE) / 1000;
         uint256 winnerPot = totalPot - fee;
@@ -152,11 +161,14 @@ contract SquadWars is Ownable, ReentrancyGuard {
             wins[war.opponent]++;
             losses[war.challenger]++;
         } else {
-            // Draw: refund both minus fee split
+            // Draw: refund both sides their share minus the protocol fee,
+            // and sweep the fee (plus any rounding dust) to the owner so it
+            // is never stranded in the contract.
             uint256 refund = (totalPot - fee) / 2;
+            war.status = WarStatus.Resolved;
             usdc.safeTransfer(war.challenger, refund);
             usdc.safeTransfer(war.opponent, refund);
-            war.status = WarStatus.Resolved;
+            usdc.safeTransfer(owner(), totalPot - 2 * refund);
             emit WarResolved(warId, address(0), refund);
             return;
         }
@@ -175,6 +187,25 @@ contract SquadWars is Ownable, ReentrancyGuard {
 
         war.status = WarStatus.Cancelled;
         usdc.safeTransfer(war.challenger, war.stake);
+        emit WarCancelled(warId);
+    }
+
+    /// @notice Owner-only recovery for a war that can no longer settle — e.g. its
+    ///         matchday was never finalized by the Oracle. Refunds the staked USDC
+    ///         to both sides (challenger only if the war was still Open).
+    function adminCancelWar(uint256 warId) external onlyOwner nonReentrant {
+        War storage war = wars[warId];
+        require(
+            war.status == WarStatus.Open || war.status == WarStatus.Active,
+            "Not cancellable"
+        );
+        bool wasActive = war.status == WarStatus.Active;
+        war.status = WarStatus.Cancelled;
+
+        usdc.safeTransfer(war.challenger, war.stake);
+        if (wasActive) {
+            usdc.safeTransfer(war.opponent, war.stake);
+        }
         emit WarCancelled(warId);
     }
 
@@ -200,19 +231,17 @@ contract SquadWars is Ownable, ReentrancyGuard {
         managers  = new address[](limit);
         winCounts = new uint256[](limit);
 
-        // Simple insertion sort for top-N
+        // Partial selection — only `limit` passes (O(total * limit)) instead of a
+        // full O(total^2) sort, so requesting a small top-N stays cheap.
         address[] memory sorted = _allManagers;
-        for (uint256 i = 0; i < total; i++) {
-            for (uint256 j = i + 1; j < total; j++) {
-                if (wins[sorted[j]] > wins[sorted[i]]) {
-                    address tmp = sorted[i];
-                    sorted[i] = sorted[j];
-                    sorted[j] = tmp;
-                }
-            }
-        }
-
         for (uint256 i = 0; i < limit; i++) {
+            uint256 best = i;
+            for (uint256 j = i + 1; j < total; j++) {
+                if (wins[sorted[j]] > wins[sorted[best]]) best = j;
+            }
+            if (best != i) {
+                (sorted[i], sorted[best]) = (sorted[best], sorted[i]);
+            }
             managers[i]  = sorted[i];
             winCounts[i] = wins[sorted[i]];
         }
@@ -241,6 +270,27 @@ contract SquadWars is Ownable, ReentrancyGuard {
 
             if (i == captainSlot) pts *= 2;
             total += pts;
+        }
+    }
+
+    /// @dev Push each playing card's matchday performance into the NFT (forges rarity).
+    ///      Deduped per (token, matchday) to prevent double-counting across wars.
+    function _creditSquad(address manager, uint256 matchday, uint8 benchedSlot) internal {
+        uint256[5] memory squadTokens = nft.getSquad(manager);
+
+        for (uint8 i = 0; i < 5; i++) {
+            if (i == benchedSlot) continue;
+
+            uint256 tokenId = squadTokens[i];
+            if (_credited[tokenId][matchday]) continue;
+            _credited[tokenId][matchday] = true;
+
+            GafferNFT.PlayerCard memory card = nft.getCard(tokenId);
+            Oracle.PlayerStats memory stats = oracle.getPlayerStats(matchday, card.playerId);
+            if (!stats.played) continue;
+
+            uint256 pts = oracle.calculatePoints(matchday, card.playerId, card.position);
+            nft.updateStats(tokenId, stats.goals, stats.assists, stats.cleanSheets, uint32(pts));
         }
     }
 

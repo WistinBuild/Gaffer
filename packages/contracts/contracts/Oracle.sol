@@ -54,7 +54,15 @@ contract Oracle is Ownable {
         bool[] calldata played
     ) external onlyOwner {
         require(!matchdayFinalized[matchday], "Matchday already finalized");
-        require(playerIds.length == goals.length, "Array length mismatch");
+        require(
+            playerIds.length == goals.length &&
+            playerIds.length == assists.length &&
+            playerIds.length == cleanSheets.length &&
+            playerIds.length == yellowCards.length &&
+            playerIds.length == redCards.length &&
+            playerIds.length == played.length,
+            "Array length mismatch"
+        );
 
         for (uint256 i = 0; i < playerIds.length; i++) {
             results[matchday][playerIds[i]] = PlayerStats({
