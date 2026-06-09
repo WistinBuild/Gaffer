@@ -36,7 +36,7 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(RPC, CHAIN);
   const owner = new ethers.Wallet(pk.startsWith("0x") ? pk : "0x" + pk, provider);
 
-  const ABI = ["function setBaseURI(string) ", "function tokenURI(uint256) view returns (string)"];
+  const ABI = ["function setBaseURI(string)", "function tokenURI(uint256) view returns (string)"];
   const nft = new ethers.Contract(A.nft, ABI, owner);
   const pm  = new ethers.Contract(A.playerMint, ABI, owner);
 
