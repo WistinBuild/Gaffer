@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
+import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { toUSDC, ensureUsdcAllowance } from "@/lib/usdc";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -11,7 +11,7 @@ import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import { rarityFor, priceUSDC, priceLabel, maxSupply, circulatingSupply } from "@/lib/market";
+import { rarityFor, priceUSDC, priceLabel, maxSupply } from "@/lib/market";
 import { CONTRACT_ADDRESSES, PLAYER_MINT_ABI } from "@/lib/contracts";
 import { playClick, playCoin, playSuccess, unlockAudio } from "@/lib/sounds";
 import playersData from "@/data/players.json";
@@ -66,13 +66,37 @@ export default function MarketplacePage() {
     }
   }, [txDone]);
 
+  // Real on-chain supply — one multicall reading catalogOf() for every player.
+  // `minted` is the true mint count (was previously a fake hash-based number).
+  const { data: catalogData, isLoading: supplyLoading } = useReadContracts({
+    contracts: ALL_PLAYERS.map((p) => ({
+      address: CONTRACT_ADDRESSES.playerMint,
+      abi: PLAYER_MINT_ABI,
+      functionName: "catalogOf" as const,
+      args: [p.id] as const,
+    })),
+    query: { refetchInterval: 20_000 }, // keep supply fresh as people mint
+  });
+
+  const supplyMap = useMemo(() => {
+    const m: Record<string, { minted: number; max: number }> = {};
+    if (!catalogData) return m;
+    ALL_PLAYERS.forEach((p, i) => {
+      const res = catalogData[i];
+      if (res?.status !== "success" || !res.result) return;
+      const c = res.result as { maxSupply: number | bigint; minted: number | bigint; exists: boolean };
+      if (!c.exists) return; // not seeded in catalog
+      m[p.id] = { minted: Number(c.minted), max: Number(c.maxSupply) };
+    });
+    return m;
+  }, [catalogData]);
+
   const filtered = useMemo(() => {
     let xs = ALL_PLAYERS.map((p) => ({
       player: p,
       rarity: rarityFor(p),
       price: priceUSDC(p),
       maxSup: maxSupply(p),
-      circ: circulatingSupply(p),
     }));
 
     if (showLegendsOnly) xs = xs.filter((x) => x.player.legend);
@@ -306,20 +330,24 @@ export default function MarketplacePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filtered.map((x, i) => (
-                <div key={x.player.id} className="reveal" style={{ ["--stagger-delay" as any]: `${Math.min(i * 20, 300)}ms` }}>
-                  <MarketCard
-                    player={x.player}
-                    rarity={x.rarity}
-                    price={x.price}
-                    circ={x.circ}
-                    max={x.maxSup}
-                    onMint={() => mintPlayer(x.player.id)}
-                    isMinting={mintingId === x.player.id && (txSending || txConfirming)}
-                    canMint={isConnected && !txSending && !txConfirming}
-                  />
-                </div>
-              ))}
+              {filtered.map((x, i) => {
+                const onchain = supplyMap[x.player.id];
+                return (
+                  <div key={x.player.id} className="reveal" style={{ ["--stagger-delay" as any]: `${Math.min(i * 20, 300)}ms` }}>
+                    <MarketCard
+                      player={x.player}
+                      rarity={x.rarity}
+                      price={x.price}
+                      minted={onchain?.minted ?? 0}
+                      max={onchain?.max ?? x.maxSup}
+                      supplyLoading={supplyLoading && !onchain}
+                      onMint={() => mintPlayer(x.player.id)}
+                      isMinting={mintingId === x.player.id && (txSending || txConfirming)}
+                      canMint={isConnected && !txSending && !txConfirming}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -333,18 +361,19 @@ export default function MarketplacePage() {
 // ─── PIECES ─────────────────────────────────────────────────────────────────
 
 function MarketCard({
-  player, rarity, price, circ, max, onMint, isMinting, canMint,
+  player, rarity, price, minted, max, supplyLoading, onMint, isMinting, canMint,
 }: {
   player: Player;
   rarity: "BRONZE" | "SILVER" | "GOLD" | "ICON";
   price: number;
-  circ: number;
+  minted: number;
   max: number;
+  supplyLoading: boolean;
   onMint: () => void;
   isMinting: boolean;
   canMint: boolean;
 }) {
-  const supplyPct = (circ / max) * 100;
+  const supplyPct = max > 0 ? (minted / max) * 100 : 0;
 
   const accentColor =
     rarity === "ICON" ? "#7FE3C0" :
@@ -384,7 +413,9 @@ function MarketCard({
           <div className="text-right">
             <div className="font-mono text-[9px] tracking-[0.22em] text-white/40 uppercase">Supply</div>
             <div className="font-mono text-sm text-white tabular-nums mt-0.5">
-              <span style={{ color: accentColor }}>{circ.toLocaleString()}</span>
+              <span style={{ color: accentColor }}>
+                {supplyLoading ? "···" : minted.toLocaleString()}
+              </span>
               <span className="text-white/30 mx-1">/</span>
               <span>{max.toLocaleString()}</span>
             </div>

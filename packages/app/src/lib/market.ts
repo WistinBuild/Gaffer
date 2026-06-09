@@ -47,19 +47,13 @@ export function priceLabel(p: Player): string {
   return v.toFixed(3);
 }
 
-// Mint count cap & circulating supply — for the marketplace flavor
+// Mint-count cap per player. Mirrors the on-chain catalog supplyCap seeded by
+// scripts/deploy-playermint.ts — used only as a fallback denominator while the
+// real on-chain `catalogOf().maxSupply` is still loading.
 export function maxSupply(p: Player): number {
   if (p.legend) return 100;          // legends ultra-scarce
   if (p.rating >= 92) return 500;
   if (p.rating >= 88) return 2000;
   if (p.rating >= 84) return 5000;
   return 10000;
-}
-
-// Deterministic "circulating" count for vibes (some % of max minted already)
-export function circulatingSupply(p: Player): number {
-  const max = maxSupply(p);
-  const seed = hashSeed(p.id);
-  const pct = 0.3 + ((seed % 50) / 100); // 30%–80% already minted
-  return Math.floor(max * pct);
 }
