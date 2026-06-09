@@ -16,7 +16,7 @@ const MARQUEE_ITEMS = [
   { label: "MD3", value: "BELLINGHAM · 18 PTS", accent: "white" },
   { label: "MD3", value: "MBAPPÉ · 31 PTS ⚡", accent: "electric" },
   { label: "LIVE", value: "8 WARS ACTIVE", accent: "red" },
-  { label: "POT", value: "0.48 ETH STAKED", accent: "gold" },
+  { label: "POT", value: "0.48 USDC STAKED", accent: "gold" },
   { label: "MD3", value: "KANE · 22 PTS", accent: "white" },
   { label: "NEW", value: "+ICON · VINICIUS JR.", accent: "electric" },
   { label: "MD4", value: "KICK-OFF IN 14h 22m", accent: "gold" },
@@ -73,7 +73,7 @@ export default function Portal() {
 
         <HudChip position="top-left"     label="MD 4 · KICKOFF" value="14:22:11" tone="gold" />
         <HudChip position="top-right"    label="MANAGERS ONLINE" value="1,247"   tone="electric" />
-        <HudChip position="bottom-left"  label="STAKED · WK"    value="48.2 ETH" tone="white" />
+        <HudChip position="bottom-left"  label="STAKED · WK"    value="48.2 USDC" tone="white" />
         <HudChip position="bottom-right" label="WARS NOW"       value="08"       tone="red" />
 
         <div className="relative mx-auto max-w-7xl">
@@ -115,7 +115,7 @@ export default function Portal() {
               <HoverWord glow="white">as</HoverWord>{" "}
               <HoverWord glow="electric">NFTs.</HoverWord>{" "}
               <HoverWord glow="white">Stake</HoverWord>{" "}
-              <HoverWord glow="gold">ETH.</HoverWord>{" "}
+              <HoverWord glow="gold">USDC.</HoverWord>{" "}
               <HoverWord glow="white">Outscore</HoverWord>{" "}
               <HoverWord glow="white">your</HoverWord>{" "}
               <HoverWord glow="white">opponent.</HoverWord>{" "}
@@ -209,7 +209,7 @@ export default function Portal() {
           <SectionHeader
             eyebrow={<>⌘ SQUAD OF THE WEEK</>}
             title={<><LetterWave text="elGoatManager's" glow="gold" charDelay={18} liftPx={6} /><br/><span className="text-white"><LetterWave text="undefeated five." glow="white" charDelay={20} liftPx={6} /></span></>}
-            right={<div className="text-right space-y-1"><div className="font-mono text-[10px] tracking-[0.2em] text-white/40 uppercase">Record this week</div><div className="font-display text-3xl text-gaffer-electric tabular-nums">5–0</div><div className="font-mono text-[10px] tracking-[0.2em] text-gaffer-gold/80 uppercase">+0.42 ETH</div></div>}
+            right={<div className="text-right space-y-1"><div className="font-mono text-[10px] tracking-[0.2em] text-white/40 uppercase">Record this week</div><div className="font-display text-3xl text-gaffer-electric tabular-nums">5–0</div><div className="font-mono text-[10px] tracking-[0.2em] text-gaffer-gold/80 uppercase">+0.42 USDC</div></div>}
           />
           <div className="mt-12 rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
             <div className="rounded-[calc(2rem-0.375rem)] bg-gradient-to-b from-gaffer-pitch/30 via-gaffer-surface/50 to-gaffer-black hairline inner-glow p-6 sm:p-10 relative overflow-hidden">
@@ -284,7 +284,7 @@ export default function Portal() {
                   </div>
                   <div className="col-span-2 sm:col-span-2 text-right font-display text-2xl tabular-nums text-gaffer-electric" style={{ textShadow: "0 0 16px rgba(34, 197, 141,0.25)" }}>
                     {m.profit}
-                    <span className="font-mono text-[10px] tracking-[0.2em] text-white/40 ml-1">ETH</span>
+                    <span className="font-mono text-[10px] tracking-[0.2em] text-white/40 ml-1">USDC</span>
                   </div>
                 </div>
               ))}
@@ -487,7 +487,7 @@ function WarRoomRow({ challenger, stake, matchday, minsLeft, featured, captain, 
         </div>
         <div className="col-span-1 md:col-span-2 text-right md:text-center">
           <div className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase">Stake</div>
-          <div className="font-display text-2xl text-gaffer-gold tabular-nums leading-none mt-0.5">{stake}<span className="font-mono text-[10px] tracking-[0.15em] text-white/40 ml-1">ETH</span></div>
+          <div className="font-display text-2xl text-gaffer-gold tabular-nums leading-none mt-0.5">{stake}<span className="font-mono text-[10px] tracking-[0.15em] text-white/40 ml-1">USDC</span></div>
         </div>
         <div className="col-span-2 md:col-span-2 flex items-center justify-end gap-3">
           <div className="hidden md:flex flex-col items-end">
@@ -581,7 +581,7 @@ function SiteFooter() {
               <div className="font-display text-white text-5xl sm:text-6xl tracking-[0.08em] leading-none">
                 <LetterWave text="GAFFER" glow="gold" charDelay={22} liftPx={6} />
               </div>
-              <p className="mt-3 max-w-md text-white/45 text-sm">On-chain fantasy football manager for World Cup 2026. Draft real players. Stake ETH. Forge legends.</p>
+              <p className="mt-3 max-w-md text-white/45 text-sm">On-chain fantasy football manager for World Cup 2026. Draft real players. Stake USDC. Forge legends.</p>
             </div>
           </div>
           <EnterPitchButton>ENTER THE PITCH</EnterPitchButton>

@@ -9,7 +9,10 @@ function hashSeed(id: string): number {
   return Math.abs(h);
 }
 
-function priceETH(p: any): number {
+// Circle USDC on Base Sepolia (override with USDC_ADDRESS).
+const DEFAULT_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+
+function priceUSDC(p: any): number {
   const norm = Math.max(0, Math.min(1, (p.rating - 70) / 30));
   const ratingPremium = Math.pow(norm, 2.4) * 0.18;
   let price = 0.002 + ratingPremium;
@@ -32,13 +35,15 @@ const POSITION_MAP: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3, FL
 
 async function main() {
   const [signer] = await ethers.getSigners();
+  const usdcAddress = process.env.USDC_ADDRESS || DEFAULT_USDC;
   const balBefore = await ethers.provider.getBalance(signer.address);
   console.log("Deployer:", signer.address);
-  console.log("Balance: ", ethers.formatEther(balBefore), "ETH");
+  console.log("Balance: ", ethers.formatEther(balBefore), "ETH (gas)");
+  console.log("USDC token:", usdcAddress);
 
   // ── Deploy PlayerMint
   const Factory = await ethers.getContractFactory("PlayerMint");
-  const contract = await Factory.deploy("https://api.gaffer.gg/players/");
+  const contract = await Factory.deploy("https://api.gaffer.gg/players/", usdcAddress);
   await contract.waitForDeployment();
   const addr = await contract.getAddress();
   console.log("\nPlayerMint deployed at:", addr);
@@ -56,7 +61,7 @@ async function main() {
     const positions = slice.map((p: any) => POSITION_MAP[p.position] ?? 4);
     const ratings   = slice.map((p: any) => p.rating);
     const legends   = slice.map((p: any) => Boolean(p.legend));
-    const prices    = slice.map((p: any) => ethers.parseEther(priceETH(p).toFixed(6)));
+    const prices    = slice.map((p: any) => ethers.parseUnits(priceUSDC(p).toFixed(6), 6));
     const supplies  = slice.map((p: any) => maxSupply(p));
 
     const tx = await contract.setCatalogBatch(ids, positions, ratings, legends, prices, supplies);
@@ -67,7 +72,7 @@ async function main() {
   const balAfter = await ethers.provider.getBalance(signer.address);
   const cost = balBefore - balAfter;
   console.log("\n--- Done ---");
-  console.log("Total deploy + seed cost:", ethers.formatEther(cost), "ETH");
+  console.log("Total deploy + seed cost:", ethers.formatEther(cost), "ETH (gas)");
   console.log("\nAdd this to packages/app/.env.local:");
   console.log("NEXT_PUBLIC_PLAYER_MINT_ADDRESS=" + addr);
 }

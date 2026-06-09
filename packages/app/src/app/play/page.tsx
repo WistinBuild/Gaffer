@@ -164,7 +164,7 @@ export default function PlayHub() {
               href="/marketplace"
               label="The market"
               hint={`Mint ${FEATURED_LEGEND.shortName}+ · 68 players live`}
-              meta="0.45 ETH"
+              meta="0.45 USDC"
               step="◇"
               theme="market"
               span="md:col-span-2"

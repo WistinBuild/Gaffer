@@ -35,7 +35,7 @@ const OUTRIGHTS: Outright[] = [
     id: "winner",
     category: "WORLD CUP 2026",
     question: "Who lifts the trophy?",
-    volume: "412 ETH",
+    volume: "412 USDC",
     options: [
       { label: "Argentina",   pct: 18, flag: "🇦🇷" },
       { label: "Brazil",      pct: 16, flag: "🇧🇷" },
@@ -51,7 +51,7 @@ const OUTRIGHTS: Outright[] = [
     id: "topscorer",
     category: "GOLDEN BOOT",
     question: "Top scorer of the tournament?",
-    volume: "188 ETH",
+    volume: "188 USDC",
     options: [
       { label: "Kylian Mbappé",       pct: 22, flag: "🇫🇷" },
       { label: "Vinícius Jr.",        pct: 14, flag: "🇧🇷" },
@@ -65,7 +65,7 @@ const OUTRIGHTS: Outright[] = [
     id: "goldenball",
     category: "GOLDEN BALL",
     question: "Player of the tournament?",
-    volume: "127 ETH",
+    volume: "127 USDC",
     options: [
       { label: "Mbappé",     pct: 19, flag: "🇫🇷" },
       { label: "Bellingham", pct: 14, flag: "🏴" },
@@ -79,7 +79,7 @@ const OUTRIGHTS: Outright[] = [
     id: "darkhorse",
     category: "DARK HORSE",
     question: "Will any unseeded team reach the SF?",
-    volume: "62 ETH",
+    volume: "62 USDC",
     options: [
       { label: "Yes",  pct: 33 },
       { label: "No",   pct: 67 },
@@ -184,7 +184,7 @@ export default function PredictPage() {
   }
 
   function handleReset() {
-    if (!confirm("Reset demo bankroll to 100 ETH and clear all bets?")) return;
+    if (!confirm("Reset demo bankroll to 100 USDC and clear all bets?")) return;
     resetBankroll(addressLower);
     setBankroll(STARTING_BANKROLL);
     setBets([]);
@@ -238,7 +238,7 @@ export default function PredictPage() {
                 <div>
                   <div className="font-display text-lg text-white leading-none">Testnet demo · play before kickoff.</div>
                   <div className="font-mono text-[10px] tracking-[0.22em] text-white/55 uppercase mt-1">
-                    100 ETH starting bankroll · all bets settle on-chain once WC 2026 begins
+                    100 USDC starting bankroll · all bets settle on-chain once WC 2026 begins
                   </div>
                 </div>
               </div>
@@ -582,14 +582,14 @@ function BankrollPanel({ bankroll, onReset }: { bankroll: number; onReset: () =>
           <div className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Demo bankroll</div>
           <div className="font-display text-4xl text-gaffer-electric tabular-nums leading-none mt-1" style={{ textShadow: "0 0 18px rgba(34, 197, 141,0.45)" }}>
             {bankroll.toFixed(1)}
-            <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1.5">ETH</span>
+            <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1.5">USDC</span>
           </div>
         </div>
         <button
           onClick={onReset}
           aria-label="Reset bankroll"
           className="h-8 w-8 rounded-full bg-white/[0.06] hairline flex items-center justify-center text-white/55 hover:text-white hover:bg-white/[0.12] transition-colors active:scale-95"
-          title="Reset to 100 ETH"
+          title="Reset to 100 USDC"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
@@ -653,7 +653,7 @@ function BetModal({ ctx, bankroll, onClose, onPlace }: {
           <div className="mt-6 space-y-4">
             {/* Quick amounts */}
             <div>
-              <label className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Stake (ETH)</label>
+              <label className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Stake (USDC)</label>
               <div className="mt-2 grid grid-cols-4 gap-2 mb-2">
                 {[1, 5, 10, 25].map((v) => (
                   <button key={v} onClick={() => setStake(String(v))}
@@ -665,7 +665,7 @@ function BetModal({ ctx, bankroll, onClose, onPlace }: {
               <input value={stake} onChange={(e) => setStake(e.target.value)}
                 className="w-full bg-black/30 hairline rounded-xl px-4 py-3 text-white font-mono outline-none focus:ring-1 focus:ring-gaffer-electric/40" />
               <div className="mt-1 font-mono text-[10px] tracking-[0.2em] text-white/40 uppercase text-right">
-                Bankroll: {bankroll.toFixed(1)} ETH
+                Bankroll: {bankroll.toFixed(1)} USDC
               </div>
             </div>
 
@@ -689,7 +689,7 @@ function BetModal({ ctx, bankroll, onClose, onPlace }: {
 
             <button onClick={() => onPlace(num)} disabled={!valid}
               className={`w-full rounded-full py-3.5 font-display text-xl tracking-wider text-gaffer-black transition-transform duration-150 ease-out-strong active:scale-[0.97] ${valid ? "bg-gaffer-electric hover:brightness-110 animate-hot-edge" : "bg-white/10 text-white/30 cursor-not-allowed"}`}>
-              {valid ? `PLACE ${num.toFixed(1)} ETH` : num > bankroll ? "INSUFFICIENT BANKROLL" : "ENTER STAKE"}
+              {valid ? `PLACE ${num.toFixed(1)} USDC` : num > bankroll ? "INSUFFICIENT BANKROLL" : "ENTER STAKE"}
             </button>
             <div className="font-mono text-[9px] tracking-[0.22em] text-white/35 uppercase text-center">
               ★ Demo · settles on-chain when WC 2026 kicks off

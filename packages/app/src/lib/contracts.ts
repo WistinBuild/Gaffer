@@ -1,4 +1,5 @@
 import { Address } from "viem";
+import { USDC_ADDRESS } from "@/lib/usdc";
 
 // ─── Deployed Addresses ───────────────────────────────────────────────────────
 export const CONTRACT_ADDRESSES = {
@@ -10,6 +11,7 @@ export const CONTRACT_ADDRESSES = {
     "0x0000000000000000000000000000000000000000") as Address,
   playerMint: (process.env.NEXT_PUBLIC_PLAYER_MINT_ADDRESS ||
     "0x0000000000000000000000000000000000000000") as Address,
+  usdc: USDC_ADDRESS,
 };
 
 // ─── Oracle ABI ───────────────────────────────────────────────────────────────
@@ -143,14 +145,17 @@ export const SQUAD_WARS_ABI = [
   {
     name: "createWar",
     type: "function",
-    stateMutability: "payable",
-    inputs: [{ name: "matchday", type: "uint256" }],
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "matchday", type: "uint256" },
+      { name: "stake", type: "uint256" },
+    ],
     outputs: [],
   },
   {
     name: "acceptWar",
     type: "function",
-    stateMutability: "payable",
+    stateMutability: "nonpayable",
     inputs: [{ name: "warId", type: "uint256" }],
     outputs: [],
   },
@@ -302,7 +307,7 @@ export const PLAYER_MINT_ABI = [
   {
     name: "mintPlayer",
     type: "function",
-    stateMutability: "payable",
+    stateMutability: "nonpayable",
     inputs: [{ name: "playerId", type: "string" }],
     outputs: [{ name: "tokenId", type: "uint256" }],
   },
@@ -319,7 +324,7 @@ export const PLAYER_MINT_ABI = [
           { name: "position",  type: "uint8" },
           { name: "rating",    type: "uint16" },
           { name: "isLegend",  type: "bool" },
-          { name: "priceWei",  type: "uint96" },
+          { name: "price",     type: "uint96" },
           { name: "maxSupply", type: "uint32" },
           { name: "minted",    type: "uint32" },
           { name: "exists",    type: "bool" },

@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { formatEther, zeroAddress, type Address } from "viem";
+import { zeroAddress, type Address } from "viem";
+import { fromUSDC } from "@/lib/usdc";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { ConnectButton } from "@/components/ui/ConnectButton";
@@ -153,9 +154,9 @@ export default function WarDetailPage() {
   const matchday = w ? Number(w.matchday) : 0;
   const { stage, mult } = STAGE_BY_MD(matchday);
   const statusLabel = ["OPEN", "ACTIVE", "RESOLVED", "CANCELLED"][w?.status ?? 0];
-  const potETH = w ? Number(formatEther(w.stake)) * 2 : 0;
-  const feeETH = potETH * 0.05;
-  const payoutETH = potETH - feeETH;
+  const potUSDC = w ? Number(fromUSDC(w.stake)) * 2 : 0;
+  const feeUSDC = potUSDC * 0.05;
+  const payoutUSDC = potUSDC - feeUSDC;
   const chalScore = w ? Number(w.challengerScore) : 0;
   const oppScore = w ? Number(w.opponentScore) : 0;
   const youWon = w ? w.winner.toLowerCase() === me : false;
@@ -255,9 +256,9 @@ export default function WarDetailPage() {
           {/* POT SUMMARY */}
           <section className="mb-14 rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
             <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/70 hairline inner-glow p-6 sm:p-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
-              <PotTile label="Total pot"     value={potETH.toFixed(4)}     tone="gold" />
-              <PotTile label="Protocol fee"  value={feeETH.toFixed(4)}     tone="white" />
-              <PotTile label="Winner takes"  value={payoutETH.toFixed(4)}  tone="electric" />
+              <PotTile label="Total pot"     value={potUSDC.toFixed(4)}     tone="gold" />
+              <PotTile label="Protocol fee"  value={feeUSDC.toFixed(4)}     tone="white" />
+              <PotTile label="Winner takes"  value={payoutUSDC.toFixed(4)}  tone="electric" />
               <PotTile label="Stage mult."   value={`${mult}×`}            tone="gold" />
             </div>
           </section>
@@ -290,8 +291,8 @@ export default function WarDetailPage() {
                   {youWon ? "VICTORY" : w.winner === zeroAddress ? "DRAW" : "DEFEAT"}
                 </div>
                 <div className="font-display text-2xl text-white tabular-nums">
-                  {youWon ? "+" : w.winner === zeroAddress ? "" : "-"}{(youWon ? payoutETH - Number(formatEther(w.stake)) : Number(formatEther(w.stake))).toFixed(4)}
-                  <span className="font-mono text-[11px] tracking-[0.2em] text-white/50 ml-1">ETH</span>
+                  {youWon ? "+" : w.winner === zeroAddress ? "" : "-"}{(youWon ? payoutUSDC - Number(fromUSDC(w.stake)) : Number(fromUSDC(w.stake))).toFixed(4)}
+                  <span className="font-mono text-[11px] tracking-[0.2em] text-white/50 ml-1">USDC</span>
                 </div>
               </div>
             </div>
@@ -442,7 +443,7 @@ function PotTile({ label, value, tone }: { label: string; value: string; tone: "
       <div className="font-mono text-[9px] tracking-[0.22em] text-white/40 uppercase">{label}</div>
       <div className={`font-display text-3xl sm:text-4xl tabular-nums leading-none mt-2 ${accent}`}>
         {value}
-        {!value.endsWith("×") && <span className="font-mono text-[11px] tracking-[0.18em] text-white/40 ml-1">ETH</span>}
+        {!value.endsWith("×") && <span className="font-mono text-[11px] tracking-[0.18em] text-white/40 ml-1">USDC</span>}
       </div>
     </div>
   );

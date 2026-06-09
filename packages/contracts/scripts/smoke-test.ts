@@ -4,8 +4,8 @@
  * Steps:
  *  1. Generate / load wallet B, fund from deployer if needed
  *  2. Both wallets mint a 5-player squad
- *  3. Wallet A creates a war (0.01 ETH stake)
- *  4. Wallet B accepts the war
+ *  3. Wallet A approves + creates a war (1 USDC stake)
+ *  4. Wallet B approves + accepts the war
  *  5. Oracle (deployer) posts matchday results
  *  6. Anyone resolves the war
  *  7. Read final state — verify winner, scores, payout
@@ -19,15 +19,17 @@ const ADDRS = {
   oracle:    process.env.NEXT_PUBLIC_ORACLE_ADDRESS    || "",
   nft:       process.env.NEXT_PUBLIC_NFT_ADDRESS       || "",
   squadWars: process.env.NEXT_PUBLIC_SQUAD_WARS_ADDRESS || "",
+  usdc:      process.env.NEXT_PUBLIC_USDC_ADDRESS      || "",
 };
-if (!ADDRS.oracle || !ADDRS.nft || !ADDRS.squadWars) {
+if (!ADDRS.oracle || !ADDRS.nft || !ADDRS.squadWars || !ADDRS.usdc) {
   throw new Error(
-    "Set NEXT_PUBLIC_ORACLE_ADDRESS, NEXT_PUBLIC_NFT_ADDRESS and NEXT_PUBLIC_SQUAD_WARS_ADDRESS " +
-    "to the deployed Base Sepolia addresses before running the smoke test.",
+    "Set NEXT_PUBLIC_ORACLE_ADDRESS, NEXT_PUBLIC_NFT_ADDRESS, NEXT_PUBLIC_SQUAD_WARS_ADDRESS " +
+    "and NEXT_PUBLIC_USDC_ADDRESS to the deployed Base Sepolia addresses before running the smoke test.",
   );
 }
 
-const STAKE = ethers.parseEther("0.01");
+const STAKE = ethers.parseUnits("1", 6); // 1 USDC (6 decimals)
+const usdc6 = (v: bigint | number | string) => ethers.formatUnits(v, 6);
 const MATCHDAY = 1;
 
 // Two distinct squads (challenger + opponent)
@@ -84,6 +86,25 @@ async function main() {
   const warsA     = await ethers.getContractAt("SquadWars", ADDRS.squadWars, deployer);
   const warsB     = await ethers.getContractAt("SquadWars", ADDRS.squadWars, walletB);
 
+  const ERC20_ABI = [
+    "function approve(address,uint256) returns (bool)",
+    "function allowance(address,address) view returns (uint256)",
+    "function balanceOf(address) view returns (uint256)",
+    "function transfer(address,uint256) returns (bool)",
+  ];
+  const usdcA = new ethers.Contract(ADDRS.usdc, ERC20_ABI, deployer);
+  const usdcB = new ethers.Contract(ADDRS.usdc, ERC20_ABI, walletB);
+
+  // Wallet B needs USDC to stake — top it up from the deployer if short.
+  const usdcB0 = await usdcB.balanceOf(walletB.address);
+  log(`Wallet B USDC: ${usdc6(usdcB0)}`);
+  if (usdcB0 < STAKE) {
+    log(`Transferring ${usdc6(STAKE)} USDC from A → B…`);
+    const tx = await usdcA.transfer(walletB.address, STAKE);
+    await tx.wait();
+    log(`✓ Funded. Wallet B USDC now: ${usdc6(await usdcB.balanceOf(walletB.address))}`);
+  }
+
   // ─── Step 1 — mint squad A ────────────────────────────────────────────────
   step(1, "Wallet A mints squad");
   const aMinted = await nftA.hasMinted(deployer.address);
@@ -111,8 +132,12 @@ async function main() {
   log(`Squad B tokens: [${squadB.join(", ")}]`);
 
   // ─── Step 3 — Wallet A creates war ────────────────────────────────────────
-  step(3, "Wallet A creates war");
-  const txCreate = await warsA.createWar(MATCHDAY, { value: STAKE });
+  step(3, "Wallet A approves + creates war");
+  if ((await usdcA.allowance(deployer.address, ADDRS.squadWars)) < STAKE) {
+    await (await usdcA.approve(ADDRS.squadWars, STAKE)).wait();
+    log(`✓ approved ${usdc6(STAKE)} USDC`);
+  }
+  const txCreate = await warsA.createWar(MATCHDAY, STAKE);
   const rCreate = await txCreate.wait();
   // Parse WarCreated event for warId
   let warId: bigint = 0n;
@@ -125,8 +150,12 @@ async function main() {
   console.log(`  ✓ War #${warId} created  ${rCreate?.hash}  gas=${rCreate?.gasUsed}`);
 
   // ─── Step 4 — Wallet B accepts ────────────────────────────────────────────
-  step(4, "Wallet B accepts war");
-  const txAccept = await warsB.acceptWar(warId, { value: STAKE });
+  step(4, "Wallet B approves + accepts war");
+  if ((await usdcB.allowance(walletB.address, ADDRS.squadWars)) < STAKE) {
+    await (await usdcB.approve(ADDRS.squadWars, STAKE)).wait();
+    log(`✓ approved ${usdc6(STAKE)} USDC`);
+  }
+  const txAccept = await warsB.acceptWar(warId);
   const rAccept = await txAccept.wait();
   log(`✓ acceptWar(${warId})  ${rAccept?.hash}  gas=${rAccept?.gasUsed}`);
 
@@ -159,8 +188,8 @@ async function main() {
   if (Number(warBefore.status) === 2) {
     log(`War #${warId} already resolved (status=Resolved)`);
   } else {
-    const balA_pre = await provider.getBalance(deployer.address);
-    const balB_pre = await provider.getBalance(walletB.address);
+    const balA_pre = await usdcA.balanceOf(deployer.address);
+    const balB_pre = await usdcB.balanceOf(walletB.address);
     const tx = await warsA.resolveWar(warId);
     const r = await tx.wait();
     log(`✓ resolveWar(${warId})  ${r?.hash}  gas=${r?.gasUsed}`);
@@ -168,16 +197,16 @@ async function main() {
     // ─── Step 7 — Final state ────────────────────────────────────────────────
     step(7, "Final state");
     const war = await warsA.getWar(warId);
-    const balA_post = await provider.getBalance(deployer.address);
-    const balB_post = await provider.getBalance(walletB.address);
+    const balA_post = await usdcA.balanceOf(deployer.address);
+    const balB_post = await usdcB.balanceOf(walletB.address);
 
     log(`War status:       ${["Open","Active","Resolved","Cancelled"][Number(war.status)]}`);
     log(`Challenger:       ${war.challenger}  (score ${war.challengerScore})`);
     log(`Opponent:         ${war.opponent}    (score ${war.opponentScore})`);
     log(`Winner:           ${war.winner === ethers.ZeroAddress ? "DRAW" : war.winner}`);
     log(``);
-    log(`Wallet A net:     ${ethers.formatEther(balA_post - balA_pre)} ETH (after resolve)`);
-    log(`Wallet B net:     ${ethers.formatEther(balB_post - balB_pre)} ETH (after resolve)`);
+    log(`Wallet A USDC net: ${usdc6(balA_post - balA_pre)} (after resolve)`);
+    log(`Wallet B USDC net: ${usdc6(balB_post - balB_pre)} (after resolve)`);
   }
 
   // ─── Reputation reads ────────────────────────────────────────────────────

@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { zeroAddress, formatEther, type Address } from "viem";
+import { zeroAddress, type Address } from "viem";
+import { fromUSDC } from "@/lib/usdc";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -102,7 +103,7 @@ export default function LeaderboardPage() {
     let staked = 0;
     const mgrSet = new Set<string>();
     wars.forEach((w: any) => {
-      const stake = Number(formatEther(w.stake));
+      const stake = Number(fromUSDC(w.stake));
       // Both sides put up the stake once status >= 1 (Active or Resolved)
       const sides = w.status >= 1 ? 2 : 1;
       staked += stake * sides;
@@ -141,13 +142,13 @@ export default function LeaderboardPage() {
                 </span>
               </h1>
               <p className="mt-3 text-white/55 max-w-xl">
-                Top managers ranked by total wins, win rate, and ETH profit since the tournament began.
+                Top managers ranked by total wins, win rate, and USDC profit since the tournament began.
               </p>
             </div>
 
             {/* Stats strip — live from chain */}
             <div className="grid grid-cols-3 gap-3">
-              <StatTile label="Total staked" value={totals.staked} unit="ETH" tone="gold" />
+              <StatTile label="Total staked" value={totals.staked} unit="USDC" tone="gold" />
               <StatTile label="Wars on-chain" value={totals.wars} unit="" tone="electric" />
               <StatTile label="Managers" value={totals.managers} unit="" tone="white" />
             </div>

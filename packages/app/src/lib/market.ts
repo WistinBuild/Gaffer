@@ -3,7 +3,7 @@
  * Deterministic — same player always yields same price.
  *
  * Formula:
- *   base       = 0.002 ETH (everyone)
+ *   base       = 0.002 USDC (everyone)
  *   rating-prem = ((rating - 70) / 30) ^ 2.4 * 0.18  // exponential curve for top tier
  *   legend×    = 2.6
  *   variance   = ±18% per-id (hash-stable)
@@ -27,7 +27,7 @@ function hashSeed(id: string): number {
   return Math.abs(h);
 }
 
-export function priceETH(p: Player): number {
+export function priceUSDC(p: Player): number {
   const norm = Math.max(0, Math.min(1, (p.rating - 70) / 30));
   const ratingPremium = Math.pow(norm, 2.4) * 0.18;
   let price = 0.002 + ratingPremium;
@@ -42,7 +42,7 @@ export function priceETH(p: Player): number {
 }
 
 export function priceLabel(p: Player): string {
-  const v = priceETH(p);
+  const v = priceUSDC(p);
   if (v >= 0.1) return v.toFixed(2);
   return v.toFixed(3);
 }

@@ -38,7 +38,7 @@ const RARITY_TIERS = [
 const FAQ = [
   {
     q: "What does it cost to mint a squad?",
-    a: "Zero — minting your 5-NFT squad is free. You only stake ETH when you accept a war.",
+    a: "Zero — minting your 5-NFT squad is free. You only stake USDC when you accept a war.",
   },
   {
     q: "Can I trade my players after minting?",
@@ -54,7 +54,7 @@ const FAQ = [
   },
   {
     q: "Why Base?",
-    a: "Sub-cent gas fees + 1-second blocks = fast, cheap matchday resolution. ETH is the native token.",
+    a: "Sub-cent gas fees + 1-second blocks = fast, cheap matchday resolution. USDC is the native token.",
   },
 ];
 
@@ -83,7 +83,7 @@ export default function RulesPage() {
                 </span>
               </h1>
               <p className="mt-4 text-white/55 max-w-xl">
-                Draft five real World Cup players. Stake ETH. Outscore your opponent on matchday.
+                Draft five real World Cup players. Stake USDC. Outscore your opponent on matchday.
                 Forge bronze cards into permanent icons.
               </p>
             </div>
@@ -127,7 +127,7 @@ export default function RulesPage() {
                   </div>
                 </div>
                 <p className="text-white/65 text-sm leading-relaxed">
-                  Stake ETH. Pick your <HoverWord glow="gold">captain (2×)</HoverWord> + bench (0×) before kick-off. Highest score takes 95% of the pot.
+                  Stake USDC. Pick your <HoverWord glow="gold">captain (2×)</HoverWord> + bench (0×) before kick-off. Highest score takes 95% of the pot.
                 </p>
               </RuleTile>
 
@@ -219,8 +219,8 @@ export default function RulesPage() {
           <section className="mt-24">
             <SectionHead step="04" title="STAKES & FEES" subtitle="No house edge. No subscription." />
             <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatBlock label="Mint cost" value="FREE" sub="0 ETH · only gas" tone="white" />
-              <StatBlock label="Min stake" value="0.001" sub="ETH per side" tone="gold" />
+              <StatBlock label="Mint cost" value="FREE" sub="0 USDC · only gas" tone="white" />
+              <StatBlock label="Min stake" value="0.001" sub="USDC per side" tone="gold" />
               <StatBlock label="Winner takes" value="95%" sub="5% protocol fee" tone="electric" />
             </div>
           </section>

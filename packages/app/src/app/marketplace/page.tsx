@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther } from "viem";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
+import { toUSDC, ensureUsdcAllowance } from "@/lib/usdc";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { ConnectButton } from "@/components/ui/ConnectButton";
@@ -11,7 +11,7 @@ import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import { rarityFor, priceETH, priceLabel, maxSupply, circulatingSupply } from "@/lib/market";
+import { rarityFor, priceUSDC, priceLabel, maxSupply, circulatingSupply } from "@/lib/market";
 import { CONTRACT_ADDRESSES, PLAYER_MINT_ABI } from "@/lib/contracts";
 import { playClick, playCoin, playSuccess, unlockAudio } from "@/lib/sounds";
 import playersData from "@/data/players.json";
@@ -24,7 +24,7 @@ type PosFilter = "ALL" | "GK" | "DEF" | "MID" | "FWD";
 type SortKey = "price-desc" | "price-asc" | "rating" | "rarity";
 
 export default function MarketplacePage() {
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const [rarity, setRarity] = useState<RarityFilter>("ALL");
   const [pos, setPos] = useState<PosFilter>("ALL");
   const [sort, setSort] = useState<SortKey>("price-desc");
@@ -34,21 +34,28 @@ export default function MarketplacePage() {
   // Mint transaction state — shared across all MarketCards via this page-level hook
   const { writeContract, data: txHash, isPending: txSending, error: txError, reset: resetTx } =
     useWriteContract();
+  const { writeContractAsync: approveAsync } = useWriteContract();
+  const publicClient = usePublicClient();
   const { isLoading: txConfirming, isSuccess: txDone } = useWaitForTransactionReceipt({ hash: txHash });
   const [mintingId, setMintingId] = useState<string | null>(null);
 
-  function mintPlayer(playerId: string) {
+  async function mintPlayer(playerId: string) {
     unlockAudio().then(playClick).catch(() => {});
+    if (!address || !publicClient) return;
     setMintingId(playerId);
     const player = ALL_PLAYERS.find((p) => p.id === playerId)!;
-    const value = parseEther(priceETH(player).toFixed(6));
-    writeContract({
-      address: CONTRACT_ADDRESSES.playerMint,
-      abi: PLAYER_MINT_ABI,
-      functionName: "mintPlayer",
-      args: [playerId],
-      value,
-    });
+    const amount = toUSDC(priceUSDC(player).toFixed(6));
+    try {
+      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.playerMint, amount);
+      writeContract({
+        address: CONTRACT_ADDRESSES.playerMint,
+        abi: PLAYER_MINT_ABI,
+        functionName: "mintPlayer",
+        args: [playerId],
+      });
+    } catch {
+      setMintingId(null);
+    }
   }
 
   // Coin + success sound when mint confirms
@@ -63,7 +70,7 @@ export default function MarketplacePage() {
     let xs = ALL_PLAYERS.map((p) => ({
       player: p,
       rarity: rarityFor(p),
-      price: priceETH(p),
+      price: priceUSDC(p),
       maxSup: maxSupply(p),
       circ: circulatingSupply(p),
     }));
@@ -90,7 +97,7 @@ export default function MarketplacePage() {
   }, [rarity, pos, sort, search, showLegendsOnly]);
 
   const stats = useMemo(() => {
-    const all = ALL_PLAYERS.map((p) => priceETH(p));
+    const all = ALL_PLAYERS.map((p) => priceUSDC(p));
     const total = all.reduce((a, b) => a + b, 0);
     const legends = ALL_PLAYERS.filter((p) => p.legend).length;
     return {
@@ -142,8 +149,8 @@ export default function MarketplacePage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatTile label="Players"   value={stats.total}     tone="white" />
               <StatTile label="Legends"   value={stats.legends}   tone="gold" />
-              <StatTile label="Floor"     value={stats.floor}     unit="ETH" tone="electric" />
-              <StatTile label="Ceiling"   value={stats.ceiling}   unit="ETH" tone="gold" />
+              <StatTile label="Floor"     value={stats.floor}     unit="USDC" tone="electric" />
+              <StatTile label="Ceiling"   value={stats.ceiling}   unit="USDC" tone="gold" />
             </div>
           </div>
 
@@ -171,7 +178,7 @@ export default function MarketplacePage() {
                     <div className="font-mono text-[9px] tracking-[0.18em] text-gaffer-gold/80 uppercase">{p.era}</div>
                     <div className="font-display text-lg text-gaffer-gold tabular-nums leading-none mt-0.5" style={{ textShadow: "0 0 12px rgba(212,175,55,0.4)" }}>
                       {priceLabel(p)}
-                      <span className="font-mono text-[9px] tracking-[0.15em] text-white/40 ml-1">ETH</span>
+                      <span className="font-mono text-[9px] tracking-[0.15em] text-white/40 ml-1">USDC</span>
                     </div>
                   </div>
                 </div>
@@ -248,7 +255,7 @@ export default function MarketplacePage() {
                 <span>
                   total value{" "}
                   <span className="text-gaffer-gold">
-                    {filtered.reduce((a, b) => a + b.price, 0).toFixed(2)} ETH
+                    {filtered.reduce((a, b) => a + b.price, 0).toFixed(2)} USDC
                   </span>
                 </span>
               </>
@@ -371,7 +378,7 @@ function MarketCard({
             <div className="font-mono text-[9px] tracking-[0.22em] text-white/40 uppercase">Price</div>
             <div className="font-display text-2xl leading-none tabular-nums mt-0.5" style={{ color: accentColor, textShadow: `0 0 12px ${accentColor}33` }}>
               {priceLabel(player)}
-              <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1">ETH</span>
+              <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1">USDC</span>
             </div>
           </div>
           <div className="text-right">
@@ -410,7 +417,7 @@ function MarketCard({
           title={!canMint && !isMinting ? "Connect wallet to mint" : undefined}
         >
           <span className="font-display text-base tracking-wider">
-            {isMinting ? "MINTING…" : `MINT · ${priceLabel(player)} ETH`}
+            {isMinting ? "MINTING…" : `MINT · ${priceLabel(player)} USDC`}
           </span>
         </button>
       </div>

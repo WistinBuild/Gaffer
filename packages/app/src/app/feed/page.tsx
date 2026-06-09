@@ -256,7 +256,7 @@ function renderMeta(e: FeedEvent): {
             <HoverWord glow="white">{e.manager2}</HoverWord>'s challenge
           </>
         ),
-        right: `${e.amount} ETH`,
+        right: `${e.amount} USDC`,
         rightColor: "#F5D26C",
       };
     }
@@ -269,7 +269,7 @@ function renderMeta(e: FeedEvent): {
             <HoverWord glow="gold">{e.manager}</HoverWord> posted a new war
           </>
         ),
-        right: `${e.amount} ETH`,
+        right: `${e.amount} USDC`,
       };
     }
     case "big_stake": {
@@ -281,7 +281,7 @@ function renderMeta(e: FeedEvent): {
             <HoverWord glow="red">{e.manager}</HoverWord> dropped a heavy stake
           </>
         ),
-        right: `${e.amount} ETH`,
+        right: `${e.amount} USDC`,
         rightColor: "#E25563",
       };
     }

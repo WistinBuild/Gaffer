@@ -2,20 +2,20 @@
  * Demo prediction-market bets — fully client-side, localStorage-backed.
  * Real settlement opens at WC kick-off (June 11 2026) once the on-chain
  * PredictMarket contract ships. Until then this is the playground that
- * lets users feel the loop without spending real ETH.
+ * lets users feel the loop without spending real USDC.
  */
 
 const BANKROLL_KEY = "gaffer_demo_bankroll_"; // + addressLower
 const BETS_KEY     = "gaffer_demo_bets_";     // + addressLower
 
-export const STARTING_BANKROLL = 100; // demo ETH
+export const STARTING_BANKROLL = 100; // demo USDC
 
 export interface DemoBet {
   id:          string;
   marketId:    string;
   marketName:  string;
   optionLabel: string;
-  stake:       number;   // demo ETH
+  stake:       number;   // demo USDC
   oddsPct:     number;   // implied probability the option resolves true
   placedAt:    number;
 }
@@ -81,7 +81,7 @@ export function placeBet(addressLower: string, input: PlaceBetInput): PlaceBetRe
   }
   const bankroll = readBankroll(addressLower);
   if (input.stake > bankroll) {
-    return { ok: false, reason: "Not enough demo ETH" };
+    return { ok: false, reason: "Not enough demo USDC" };
   }
   const bet: DemoBet = {
     id:          `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

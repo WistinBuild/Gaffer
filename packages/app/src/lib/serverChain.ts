@@ -13,6 +13,7 @@ import {
   GAFFER_NFT_ABI,
   ORACLE_ABI,
 } from "@/lib/contracts";
+import { USDC_ADDRESS, USDC_ABI } from "@/lib/usdc";
 
 // ─── Base Sepolia ──────────────────────────────────────────────────────────
 export const baseSepolia = defineChain({
@@ -53,7 +54,7 @@ export function getBotWallet() {
   });
 }
 
-export { CONTRACT_ADDRESSES, SQUAD_WARS_ABI, GAFFER_NFT_ABI, ORACLE_ABI };
+export { CONTRACT_ADDRESSES, SQUAD_WARS_ABI, GAFFER_NFT_ABI, ORACLE_ABI, USDC_ADDRESS, USDC_ABI };
 
 // ─── Default bot squad (used if the bot hasn't minted yet) ────────────────────
 // 5 well-balanced players with valid formation (1 GK, 2 DEF, 1 MID, 1 FWD).

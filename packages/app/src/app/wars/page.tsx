@@ -10,7 +10,8 @@ import {
   useWaitForTransactionReceipt,
   usePublicClient,
 } from "wagmi";
-import { parseEther, formatEther, zeroAddress, decodeEventLog, type Address } from "viem";
+import { zeroAddress, decodeEventLog, type Address } from "viem";
+import { toUSDC, fromUSDC, ensureUsdcAllowance } from "@/lib/usdc";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -140,6 +141,7 @@ export default function WarsPage() {
   const publicClient = usePublicClient();
   const { writeContract, data: txHash, isPending: txSending, error: txError } =
     useWriteContract();
+  const { writeContractAsync: approveAsync } = useWriteContract();
   const { data: txReceipt, isLoading: txConfirming, isSuccess: txDone } =
     useWaitForTransactionReceipt({ hash: txHash });
 
@@ -152,31 +154,42 @@ export default function WarsPage() {
     }
   }, [txDone, refetchWars, refetchWins, refetchLosses]);
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!hasContracts) return alert("Contracts not deployed yet — set NEXT_PUBLIC_*_ADDRESS in .env.local");
+    if (!address || !publicClient) return;
     setChallengeMode("human");
     setBotError(null);
-    writeContract({
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "createWar",
-      args: [BigInt(createMD)],
-      value: parseEther(createStake),
-    });
+    const stake = toUSDC(createStake);
+    try {
+      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
+      writeContract({
+        address: CONTRACT_ADDRESSES.squadWars,
+        abi: SQUAD_WARS_ABI,
+        functionName: "createWar",
+        args: [BigInt(createMD), stake],
+      });
+    } catch { /* user rejected approval */ }
   }
 
-  function handleChallengeBot() {
+  async function handleChallengeBot() {
     if (!hasContracts) return alert("Contracts not deployed yet");
+    if (!address || !publicClient) return;
     setChallengeMode("bot");
     setBotPhase("idle");
     setBotError(null);
-    writeContract({
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "createWar",
-      args: [BigInt(createMD)],
-      value: parseEther(createStake),
-    });
+    const stake = toUSDC(createStake);
+    try {
+      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
+      writeContract({
+        address: CONTRACT_ADDRESSES.squadWars,
+        abi: SQUAD_WARS_ABI,
+        functionName: "createWar",
+        args: [BigInt(createMD), stake],
+      });
+    } catch {
+      setBotError("Approval rejected.");
+      setBotPhase("error");
+    }
   }
 
   // After the createWar tx confirms in bot mode: extract warId from the
@@ -202,7 +215,7 @@ export default function WarsPage() {
       setBotPhase("error");
       return;
     }
-    const stakeWei = parseEther(createStake).toString();
+    const stake = toUSDC(createStake).toString();
     const wid = warId;
     (async () => {
       setBotPhase("awaiting-bot");
@@ -210,7 +223,7 @@ export default function WarsPage() {
         const res = await fetch("/api/bot/challenge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ warId: wid.toString(), stakeWei }),
+          body: JSON.stringify({ warId: wid.toString(), stake }),
         });
         const j = await res.json();
         if (!res.ok || !j.ok) throw new Error(j.error || `bot/challenge ${res.status}`);
@@ -228,15 +241,18 @@ export default function WarsPage() {
     })();
   }, [txDone, txReceipt, challengeMode, botPhase, createStake, router]);
 
-  function handleAccept(warId: bigint, stake: bigint) {
+  async function handleAccept(warId: bigint, stake: bigint) {
     if (!hasContracts) return alert("Contracts not deployed yet");
-    writeContract({
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "acceptWar",
-      args: [warId],
-      value: stake,
-    });
+    if (!address || !publicClient) return;
+    try {
+      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
+      writeContract({
+        address: CONTRACT_ADDRESSES.squadWars,
+        abi: SQUAD_WARS_ABI,
+        functionName: "acceptWar",
+        args: [warId],
+      });
+    } catch { /* user rejected approval */ }
   }
 
   // Decision lock state
@@ -286,7 +302,7 @@ export default function WarsPage() {
                 </span>
               </h1>
               <p className="mt-3 text-white/55 max-w-xl">
-                Stake ETH. Outscore your opponent on matchday. Winner takes 95% of the pot.
+                Stake USDC. Outscore your opponent on matchday. Winner takes 95% of the pot.
               </p>
             </div>
 
@@ -548,8 +564,8 @@ function ActiveWarCard({
   const ready = captainSlot !== null && benchedSlot !== null && captainSlot !== benchedSlot;
   const youAreChallenger = war.challenger.toLowerCase() === me;
   const opponent = youAreChallenger ? war.opponent : war.challenger;
-  const stakeETH = Number(formatEther(war.stake));
-  const potETH = stakeETH * 2;
+  const stakeUSDC = fromUSDC(war.stake);
+  const potUSDC = stakeUSDC * 2;
 
   // We don't read each player's NFT here yet; show 5 slot placeholders + names from mock squad as visual stand-in
   const placeholderSquad = ["alisson", "van_dijk", "rodri", "bellingham", "mbappe"];
@@ -569,14 +585,14 @@ function ActiveWarCard({
             <div>
               <div className="font-mono text-[9px] tracking-[0.22em] text-white/40 uppercase">Pot</div>
               <div className="font-display text-3xl text-gaffer-gold tabular-nums leading-none">
-                {potETH.toFixed(3)}
-                <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1">ETH</span>
+                {potUSDC.toFixed(3)}
+                <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1">USDC</span>
               </div>
             </div>
             <div>
               <div className="font-mono text-[9px] tracking-[0.22em] text-white/40 uppercase">Stake</div>
               <div className="font-mono text-xl text-white tabular-nums leading-none">
-                {stakeETH.toFixed(3)}
+                {stakeUSDC.toFixed(3)}
               </div>
             </div>
           </div>
@@ -662,7 +678,7 @@ function OpenWarCard({
   isMine: boolean;
   onAccept: () => void;
 }) {
-  const stakeETH = Number(formatEther(war.stake));
+  const stakeUSDC = fromUSDC(war.stake);
   return (
     <div className={`group rounded-2xl p-[1.5px] hover-lift ${
       isMine ? "bg-gradient-to-br from-gaffer-electric/40 via-white/10 to-transparent animate-hot-edge"
@@ -693,14 +709,14 @@ function OpenWarCard({
           <div>
             <div className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase">Stake</div>
             <div className="font-display text-3xl text-gaffer-gold tabular-nums leading-none mt-1">
-              {stakeETH.toFixed(3)}
-              <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1">ETH</span>
+              {stakeUSDC.toFixed(3)}
+              <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 ml-1">USDC</span>
             </div>
           </div>
           <div>
             <div className="font-mono text-[9px] tracking-[0.18em] text-white/40 uppercase">Winner takes</div>
             <div className="font-mono text-lg text-gaffer-electric tabular-nums leading-none mt-1.5">
-              {(stakeETH * 2 * 0.95).toFixed(4)}
+              {(stakeUSDC * 2 * 0.95).toFixed(4)}
             </div>
           </div>
         </div>
@@ -713,7 +729,7 @@ function OpenWarCard({
             hover:bg-gaffer-gold hover:text-gaffer-black
             disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/85"
         >
-          {isMine ? "WAITING FOR OPPONENT…" : `ACCEPT · ${stakeETH.toFixed(3)} ETH`}
+          {isMine ? "WAITING FOR OPPONENT…" : `ACCEPT · ${stakeUSDC.toFixed(3)} USDC`}
         </button>
       </div>
     </div>
@@ -727,12 +743,12 @@ function ResolvedRowChain({ war, me, last }: { war: ChainWar; me?: string; last:
   const opp = youAreChallenger ? war.opponent : war.challenger;
   const yourScore = youAreChallenger ? war.challengerScore : war.opponentScore;
   const theirScore = youAreChallenger ? war.opponentScore : war.challengerScore;
-  const stakeETH = Number(formatEther(war.stake));
+  const stakeUSDC = fromUSDC(war.stake);
   const profit = isDraw
     ? 0
     : youWon
-      ? stakeETH * 2 * 0.95 - stakeETH // net ETH gained
-      : -stakeETH;
+      ? stakeUSDC * 2 * 0.95 - stakeUSDC // net USDC gained
+      : -stakeUSDC;
   const result: "W" | "L" | "D" = isDraw ? "D" : youWon ? "W" : "L";
 
   return (
@@ -764,7 +780,7 @@ function ResolvedRowChain({ war, me, last }: { war: ChainWar; me?: string; last:
         }`}>
           {profit > 0 ? "+" : ""}{profit.toFixed(4)}
         </div>
-        <div className="font-mono text-[10px] tracking-[0.18em] text-white/40 uppercase mt-1">ETH</div>
+        <div className="font-mono text-[10px] tracking-[0.18em] text-white/40 uppercase mt-1">USDC</div>
       </div>
     </div>
   );
@@ -834,7 +850,7 @@ function CreateWarModal({
               </div>
               {/* stake */}
               <div>
-                <label className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Stake (ETH)</label>
+                <label className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Stake (USDC)</label>
                 <div className="mt-2 grid grid-cols-4 gap-2 mb-2">
                   {["0.01","0.05","0.10","0.25"].map((s) => (
                     <button
@@ -862,7 +878,7 @@ function CreateWarModal({
               <div className="rounded-xl bg-gaffer-pitch/30 hairline p-3 flex items-center justify-between">
                 <span className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">Winner takes</span>
                 <span className="font-display text-2xl text-gaffer-electric tabular-nums">
-                  {(Number(stake || "0") * 2 * 0.95).toFixed(4)} ETH
+                  {(Number(stake || "0") * 2 * 0.95).toFixed(4)} USDC
                 </span>
               </div>
 
@@ -885,8 +901,8 @@ function CreateWarModal({
                   : sending
                     ? "POSTING…"
                     : isBot
-                      ? `STAKE & CHALLENGE BOT · ${stake} ETH`
-                      : `POST WAR · ${stake} ETH`}
+                      ? `STAKE & CHALLENGE BOT · ${stake} USDC`
+                      : `POST WAR · ${stake} USDC`}
               </button>
             </div>
           )}

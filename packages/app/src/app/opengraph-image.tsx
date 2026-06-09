@@ -142,7 +142,7 @@ export default async function OpenGraphImage() {
                 lineHeight: 1.3,
               }}
             >
-              Draft 5 World Cup NFTs. Stake ETH. Outscore your opponent on matchday.
+              Draft 5 World Cup NFTs. Stake USDC. Outscore your opponent on matchday.
             </div>
             <div
               style={{

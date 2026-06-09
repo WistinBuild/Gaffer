@@ -4,21 +4,27 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title PlayerMint
  * @notice Individual player NFTs with on-chain catalog of prices + scarcity.
- *         Catalog seeded by owner; anyone can mint any player at its set price.
+ *         Catalog seeded by owner; anyone can mint any player at its set USDC price.
+ *         Payment is in USDC (6 decimals) — buyers approve this contract first.
  */
 contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
     using Strings for uint256;
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable usdc;     // payment token (6 decimals)
 
     struct PlayerMeta {
         uint8  position;     // 0=GK, 1=DEF, 2=MID, 3=FWD, 4=FLEX
         uint16 rating;       // 0-99
         bool   isLegend;
-        uint96 priceWei;
+        uint96 price;        // USDC (6 decimals)
         uint32 maxSupply;
         uint32 minted;
         bool   exists;
@@ -39,11 +45,12 @@ contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
     uint256 private _nextTokenId = 1;
     string  private _baseTokenURI;
 
-    event CatalogSet(string indexed playerId, uint96 priceWei, uint32 maxSupply);
+    event CatalogSet(string indexed playerId, uint96 price, uint32 maxSupply);
     event PlayerMinted(address indexed buyer, string playerId, uint256 indexed tokenId, uint96 paid);
 
-    constructor(string memory baseURI) ERC721("GafferPlayerNFT", "GPLAYER") {
+    constructor(string memory baseURI, address _usdc) ERC721("GafferPlayerNFT", "GPLAYER") {
         _baseTokenURI = baseURI;
+        usdc = IERC20(_usdc);
     }
 
     // ─── Catalog (owner only) ───────────────────────────────────────────────
@@ -53,17 +60,17 @@ contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
         uint8   position,
         uint16  rating,
         bool    isLegend,
-        uint96  priceWei,
+        uint96  price,
         uint32  supplyCap
     ) external onlyOwner {
         PlayerMeta storage m = _catalog[playerId];
         m.position  = position;
         m.rating    = rating;
         m.isLegend  = isLegend;
-        m.priceWei  = priceWei;
+        m.price     = price;
         m.maxSupply = supplyCap;
         m.exists    = true;
-        emit CatalogSet(playerId, priceWei, supplyCap);
+        emit CatalogSet(playerId, price, supplyCap);
     }
 
     function setCatalogBatch(
@@ -71,7 +78,7 @@ contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
         uint8[]  calldata positions,
         uint16[] calldata ratings,
         bool[]   calldata isLegends,
-        uint96[] calldata pricesWei,
+        uint96[] calldata prices,
         uint32[] calldata supplyCaps
     ) external onlyOwner {
         uint256 n = playerIds.length;
@@ -79,7 +86,7 @@ contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
             n == positions.length &&
             n == ratings.length &&
             n == isLegends.length &&
-            n == pricesWei.length &&
+            n == prices.length &&
             n == supplyCaps.length,
             "Length mismatch"
         );
@@ -88,20 +95,22 @@ contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
             m.position  = positions[i];
             m.rating    = ratings[i];
             m.isLegend  = isLegends[i];
-            m.priceWei  = pricesWei[i];
+            m.price     = prices[i];
             m.maxSupply = supplyCaps[i];
             m.exists    = true;
-            emit CatalogSet(playerIds[i], pricesWei[i], supplyCaps[i]);
+            emit CatalogSet(playerIds[i], prices[i], supplyCaps[i]);
         }
     }
 
     // ─── Mint ───────────────────────────────────────────────────────────────
 
-    function mintPlayer(string calldata playerId) external payable nonReentrant returns (uint256) {
+    /// @notice Mint a player. Caller must approve `price` USDC to this contract first.
+    function mintPlayer(string calldata playerId) external nonReentrant returns (uint256) {
         PlayerMeta storage m = _catalog[playerId];
         require(m.exists, "Player not in catalog");
-        require(msg.value >= m.priceWei, "Insufficient payment");
         require(m.minted < m.maxSupply, "Sold out");
+
+        usdc.safeTransferFrom(msg.sender, address(this), m.price);
 
         m.minted++;
         uint256 tokenId = _nextTokenId++;
@@ -116,12 +125,7 @@ contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
         });
         _ownerTokens[msg.sender].push(tokenId);
 
-        // Refund overpayment
-        if (msg.value > m.priceWei) {
-            payable(msg.sender).transfer(msg.value - m.priceWei);
-        }
-
-        emit PlayerMinted(msg.sender, playerId, tokenId, m.priceWei);
+        emit PlayerMinted(msg.sender, playerId, tokenId, m.price);
         return tokenId;
     }
 
@@ -146,8 +150,8 @@ contract PlayerMint is ERC721, Ownable, ReentrancyGuard {
 
     // ─── Admin ──────────────────────────────────────────────────────────────
 
-    function withdraw(address payable to) external onlyOwner {
-        to.transfer(address(this).balance);
+    function withdraw(address to) external onlyOwner {
+        usdc.safeTransfer(to, usdc.balanceOf(address(this)));
     }
 
     function setBaseURI(string calldata baseURI) external onlyOwner {

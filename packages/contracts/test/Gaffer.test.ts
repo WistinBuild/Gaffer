@@ -5,13 +5,22 @@ describe("GAFFER Protocol", () => {
   let oracle: any;
   let nft: any;
   let squadWars: any;
+  let usdc: any;
   let owner: any, alice: any, bob: any;
 
   const PLAYERS = ["mbappe", "bellingham", "van_dijk", "alisson", "vinicius"];
   const POSITIONS: number[] = [3, 2, 1, 0, 3]; // FWD, MID, DEF, GK, FWD
 
+  const STAKE = ethers.parseUnits("10", 6);     // 10 USDC (6 decimals)
+  const FUND  = ethers.parseUnits("1000", 6);   // seed each wallet
+
   beforeEach(async () => {
     [owner, alice, bob] = await ethers.getSigners();
+
+    const USDCFactory = await ethers.getContractFactory("MockUSDC");
+    usdc = await USDCFactory.deploy();
+    await usdc.mint(alice.address, FUND);
+    await usdc.mint(bob.address, FUND);
 
     const OracleFactory = await ethers.getContractFactory("Oracle");
     oracle = await OracleFactory.deploy();
@@ -22,7 +31,8 @@ describe("GAFFER Protocol", () => {
     const SquadWarsFactory = await ethers.getContractFactory("SquadWars");
     squadWars = await SquadWarsFactory.deploy(
       await oracle.getAddress(),
-      await nft.getAddress()
+      await nft.getAddress(),
+      await usdc.getAddress()
     );
 
     await nft.setSquadWarsContract(await squadWars.getAddress());
@@ -104,27 +114,38 @@ describe("GAFFER Protocol", () => {
     beforeEach(async () => {
       await nft.connect(alice).mintSquad(PLAYERS, POSITIONS);
       await nft.connect(bob).mintSquad(PLAYERS, POSITIONS);
+      // Approve the protocol to pull USDC stakes
+      await usdc.connect(alice).approve(await squadWars.getAddress(), FUND);
+      await usdc.connect(bob).approve(await squadWars.getAddress(), FUND);
     });
 
     it("creates an open war", async () => {
-      await squadWars.connect(alice).createWar(1, { value: ethers.parseEther("0.01") });
+      await squadWars.connect(alice).createWar(1, STAKE);
       const war = await squadWars.getWar(1);
       expect(war.challenger).to.equal(alice.address);
+      expect(war.stake).to.equal(STAKE);
       expect(war.status).to.equal(0n); // Open
     });
 
-    it("accepts a war", async () => {
-      await squadWars.connect(alice).createWar(1, { value: ethers.parseEther("0.01") });
-      await squadWars.connect(bob).acceptWar(1, { value: ethers.parseEther("0.01") });
+    it("rejects a stake below the minimum", async () => {
+      await expect(
+        squadWars.connect(alice).createWar(1, 999n)
+      ).to.be.revertedWith("Stake too low");
+    });
+
+    it("accepts a war and escrows both stakes", async () => {
+      await squadWars.connect(alice).createWar(1, STAKE);
+      await squadWars.connect(bob).acceptWar(1);
       const war = await squadWars.getWar(1);
       expect(war.opponent).to.equal(bob.address);
       expect(war.status).to.equal(1n); // Active
+      expect(await usdc.balanceOf(await squadWars.getAddress())).to.equal(STAKE * 2n);
     });
 
-    it("resolves war and pays winner", async () => {
+    it("resolves war and settles the pot", async () => {
       const matchday = 1;
-      await squadWars.connect(alice).createWar(matchday, { value: ethers.parseEther("0.01") });
-      await squadWars.connect(bob).acceptWar(1, { value: ethers.parseEther("0.01") });
+      await squadWars.connect(alice).createWar(matchday, STAKE);
+      await squadWars.connect(bob).acceptWar(1);
 
       await oracle.postMatchdayResults(
         matchday,
@@ -140,29 +161,26 @@ describe("GAFFER Protocol", () => {
       await squadWars.resolveWar(1);
       const war = await squadWars.getWar(1);
       expect(war.status).to.equal(2n); // Resolved
-      // Both squads have identical players so scores are equal — draw
-      // winner is address(0), both refunded minus fee
+      // Both squads have identical players so scores are equal — draw, both refunded
       expect(war.challengerScore).to.be.gt(0n);
       expect(war.challengerScore).to.equal(war.opponentScore);
+      // Draw refunds the pot minus the protocol fee; the fee is retained by the contract
+      const fee = (STAKE * 2n * 50n) / 1000n;
+      expect(await usdc.balanceOf(await squadWars.getAddress())).to.equal(fee);
     });
 
-    it("cancels an open war and refunds stake", async () => {
-      const stake = ethers.parseEther("0.01");
-      await squadWars.connect(alice).createWar(1, { value: stake });
+    it("cancels an open war and refunds the USDC stake", async () => {
+      const balBefore = await usdc.balanceOf(alice.address);
+      await squadWars.connect(alice).createWar(1, STAKE);
+      expect(await usdc.balanceOf(alice.address)).to.equal(balBefore - STAKE);
 
-      const balBefore = await ethers.provider.getBalance(alice.address);
-      const tx = await squadWars.connect(alice).cancelWar(1);
-      const receipt = await tx.wait();
-      const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
-      const balAfter = await ethers.provider.getBalance(alice.address);
-
-      // Alice got refunded (accounting for gas)
-      expect(balAfter + gasUsed).to.be.closeTo(balBefore + stake, ethers.parseEther("0.0001"));
+      await squadWars.connect(alice).cancelWar(1);
+      expect(await usdc.balanceOf(alice.address)).to.equal(balBefore);
     });
 
     it("returns leaderboard sorted by wins", async () => {
-      await squadWars.connect(alice).createWar(1, { value: ethers.parseEther("0.01") });
-      await squadWars.connect(bob).acceptWar(1, { value: ethers.parseEther("0.01") });
+      await squadWars.connect(alice).createWar(1, STAKE);
+      await squadWars.connect(bob).acceptWar(1);
 
       await oracle.postMatchdayResults(
         1, PLAYERS,
@@ -173,6 +191,40 @@ describe("GAFFER Protocol", () => {
 
       const [managers] = await squadWars.getLeaderboard(10);
       expect(managers[0]).to.be.oneOf([alice.address, bob.address]);
+    });
+  });
+
+  // ─── PlayerMint (USDC marketplace) ──────────────────────────────────────────
+
+  describe("PlayerMint", () => {
+    let market: any;
+    const PRICE = ethers.parseUnits("5", 6); // 5 USDC
+
+    beforeEach(async () => {
+      const Factory = await ethers.getContractFactory("PlayerMint");
+      market = await Factory.deploy("https://api.gaffer.gg/players/", await usdc.getAddress());
+      await market.setCatalogEntry("mbappe", 3, 91, false, PRICE, 1000);
+    });
+
+    it("mints a player against an approved USDC balance", async () => {
+      await usdc.connect(alice).approve(await market.getAddress(), PRICE);
+      await market.connect(alice).mintPlayer("mbappe");
+
+      expect(await market.balanceOf(alice.address)).to.equal(1n);
+      expect(await usdc.balanceOf(await market.getAddress())).to.equal(PRICE);
+    });
+
+    it("reverts without approval", async () => {
+      await expect(market.connect(alice).mintPlayer("mbappe")).to.be.reverted;
+    });
+
+    it("lets the owner withdraw collected USDC", async () => {
+      await usdc.connect(alice).approve(await market.getAddress(), PRICE);
+      await market.connect(alice).mintPlayer("mbappe");
+
+      const before = await usdc.balanceOf(owner.address);
+      await market.connect(owner).withdraw(owner.address);
+      expect(await usdc.balanceOf(owner.address)).to.equal(before + PRICE);
     });
   });
 });

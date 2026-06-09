@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { formatEther, zeroAddress, type Address } from "viem";
+import { zeroAddress, type Address } from "viem";
+import { fromUSDC } from "@/lib/usdc";
 import {
   getStarterIds,
   readPoints,
@@ -214,17 +215,17 @@ export default function ProfilePage() {
       .map((p) => p!);
   }, [starterIdsState, mintedIds]);
 
-  // Compute net ETH profit across resolved wars
-  const profitETH = useMemo(() => {
+  // Compute net USDC profit across resolved wars
+  const profitUSDC = useMemo(() => {
     return myWars.reduce((acc, w) => {
-      const stake = Number(formatEther(w.stake));
+      const stake = Number(fromUSDC(w.stake));
       const youWon = w.winner.toLowerCase() === me;
       const isDraw = w.winner === zeroAddress;
       if (isDraw) return acc; // no net profit on draws
       return acc + (youWon ? stake * 2 * 0.95 - stake : -stake);
     }, 0);
   }, [myWars, me]);
-  const totalProfit = `${profitETH >= 0 ? "+" : ""}${profitETH.toFixed(4)}`;
+  const totalProfit = `${profitUSDC >= 0 ? "+" : ""}${profitUSDC.toFixed(4)}`;
 
   // Total fantasy points across squad
   const totalPts = cards.reduce((a, c) => a + Number(c.tournamentPts), 0);
@@ -280,7 +281,7 @@ export default function ProfilePage() {
               <StatTile label="Wins"     value={winsN}   tone="electric" />
               <StatTile label="Losses"   value={lossN}   tone="red" />
               <StatTile label="Win rate" value={`${winRate}%`} tone="gold" />
-              <StatTile label="Profit"   value={totalProfit} unit="ETH" tone={profitETH >= 0 ? "electric" : "red"} />
+              <StatTile label="Profit"   value={totalProfit} unit="USDC" tone={profitUSDC >= 0 ? "electric" : "red"} />
             </div>
           </section>
 
@@ -449,7 +450,7 @@ export default function ProfilePage() {
                       const opp = youAreChallenger ? w.opponent : w.challenger;
                       const yourScore = youAreChallenger ? w.challengerScore : w.opponentScore;
                       const theirScore = youAreChallenger ? w.opponentScore : w.challengerScore;
-                      const stake = Number(formatEther(w.stake));
+                      const stake = Number(fromUSDC(w.stake));
                       const profit = isDraw ? 0 : youWon ? stake * 2 * 0.95 - stake : -stake;
                       const profitStr = `${profit >= 0 ? "+" : ""}${profit.toFixed(4)}`;
                       const resultLetter: "W" | "L" | "D" = isDraw ? "D" : youWon ? "W" : "L";
@@ -482,7 +483,7 @@ export default function ProfilePage() {
                             <div className={`font-display text-2xl tabular-nums leading-none ${
                               profit > 0 ? "text-gaffer-electric" : profit < 0 ? "text-gaffer-red" : "text-white/70"
                             }`}>{profitStr}</div>
-                            <div className="font-mono text-[10px] tracking-[0.18em] text-white/40 uppercase mt-1">ETH</div>
+                            <div className="font-mono text-[10px] tracking-[0.18em] text-white/40 uppercase mt-1">USDC</div>
                           </div>
                           <div className="col-span-1 text-right text-white/30">
                             <Arrow />

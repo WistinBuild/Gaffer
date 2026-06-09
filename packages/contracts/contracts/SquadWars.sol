@@ -3,15 +3,20 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./Oracle.sol";
 import "./GafferNFT.sol";
 
 contract SquadWars is Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     Oracle     public oracle;
     GafferNFT  public nft;
+    IERC20     public usdc;          // payment token (6 decimals)
 
-    uint256 public constant MIN_STAKE      = 0.001 ether;
-    uint256 public constant PROTOCOL_FEE   = 50;  // 5% scaled by 1000
+    uint256 public constant MIN_STAKE      = 1_000;  // 0.001 USDC (6 decimals)
+    uint256 public constant PROTOCOL_FEE   = 50;     // 5% scaled by 1000
     uint256 private _nextWarId = 1;
 
     enum WarStatus { Open, Active, Resolved, Cancelled }
@@ -20,7 +25,7 @@ contract SquadWars is Ownable, ReentrancyGuard {
         uint256 id;
         address challenger;
         address opponent;
-        uint256 stake;          // per side
+        uint256 stake;          // per side (USDC, 6 decimals)
         uint256 matchday;
         uint8   captainSlot;    // index 0-4 in squad (2x points)
         uint8   benchedSlot;    // index 0-4 in squad (0 points)
@@ -47,22 +52,26 @@ contract SquadWars is Ownable, ReentrancyGuard {
     event WarResolved(uint256 indexed warId, address indexed winner, uint256 payout);
     event WarCancelled(uint256 indexed warId);
 
-    constructor(address _oracle, address _nft) {
+    constructor(address _oracle, address _nft, address _usdc) {
         oracle = Oracle(_oracle);
         nft    = GafferNFT(_nft);
+        usdc   = IERC20(_usdc);
     }
 
-    function createWar(uint256 matchday) external payable {
-        require(msg.value >= MIN_STAKE, "Stake too low");
+    /// @notice Create a war. Caller must have approved `stake` USDC to this contract first.
+    function createWar(uint256 matchday, uint256 stake) external nonReentrant {
+        require(stake >= MIN_STAKE, "Stake too low");
         require(nft.hasMinted(msg.sender), "No squad minted");
         require(!oracle.matchdayFinalized(matchday), "Matchday already over");
+
+        usdc.safeTransferFrom(msg.sender, address(this), stake);
 
         uint256 warId = _nextWarId++;
         wars[warId] = War({
             id:                  warId,
             challenger:          msg.sender,
             opponent:            address(0),
-            stake:               msg.value,
+            stake:               stake,
             matchday:            matchday,
             captainSlot:         0,
             benchedSlot:         4,
@@ -77,16 +86,18 @@ contract SquadWars is Ownable, ReentrancyGuard {
 
         _trackManager(msg.sender);
         activeWars[msg.sender].push(warId);
-        emit WarCreated(warId, msg.sender, msg.value, matchday);
+        emit WarCreated(warId, msg.sender, stake, matchday);
     }
 
-    function acceptWar(uint256 warId) external payable {
+    /// @notice Accept an open war. Caller must have approved the war's stake in USDC first.
+    function acceptWar(uint256 warId) external nonReentrant {
         War storage war = wars[warId];
         require(war.status == WarStatus.Open, "War not open");
         require(war.challenger != msg.sender, "Cannot fight yourself");
-        require(msg.value == war.stake, "Wrong stake amount");
         require(nft.hasMinted(msg.sender), "No squad minted");
         require(!oracle.matchdayFinalized(war.matchday), "Matchday already over");
+
+        usdc.safeTransferFrom(msg.sender, address(this), war.stake);
 
         war.opponent = msg.sender;
         war.status   = WarStatus.Active;
@@ -143,27 +154,27 @@ contract SquadWars is Ownable, ReentrancyGuard {
         } else {
             // Draw: refund both minus fee split
             uint256 refund = (totalPot - fee) / 2;
-            payable(war.challenger).transfer(refund);
-            payable(war.opponent).transfer(refund);
+            usdc.safeTransfer(war.challenger, refund);
+            usdc.safeTransfer(war.opponent, refund);
             war.status = WarStatus.Resolved;
             emit WarResolved(warId, address(0), refund);
             return;
         }
 
         war.status = WarStatus.Resolved;
-        payable(war.winner).transfer(winnerPot);
-        payable(owner()).transfer(fee);
+        usdc.safeTransfer(war.winner, winnerPot);
+        usdc.safeTransfer(owner(), fee);
 
         emit WarResolved(warId, war.winner, winnerPot);
     }
 
-    function cancelWar(uint256 warId) external {
+    function cancelWar(uint256 warId) external nonReentrant {
         War storage war = wars[warId];
         require(war.status == WarStatus.Open, "War not open");
         require(war.challenger == msg.sender || msg.sender == owner(), "Not authorized");
 
         war.status = WarStatus.Cancelled;
-        payable(war.challenger).transfer(war.stake);
+        usdc.safeTransfer(war.challenger, war.stake);
         emit WarCancelled(warId);
     }
 
@@ -189,7 +200,7 @@ contract SquadWars is Ownable, ReentrancyGuard {
         managers  = new address[](limit);
         winCounts = new uint256[](limit);
 
-        // Simple insertion sort for top-N (fine for hackathon scale)
+        // Simple insertion sort for top-N
         address[] memory sorted = _allManagers;
         for (uint256 i = 0; i < total; i++) {
             for (uint256 j = i + 1; j < total; j++) {

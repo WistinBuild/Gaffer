@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseEther, type Address } from "viem";
+import { type Address } from "viem";
 import {
   getPublic,
   getBotWallet,
@@ -7,6 +7,8 @@ import {
   CONTRACT_ADDRESSES,
   SQUAD_WARS_ABI,
   GAFFER_NFT_ABI,
+  USDC_ADDRESS,
+  USDC_ABI,
   BOT_SQUAD_PLAYER_IDS,
   BOT_SQUAD_POSITIONS,
 } from "@/lib/serverChain";
@@ -16,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/bot/challenge
- * Body: { warId: number, stakeWei: string }
+ * Body: { warId: number, stake: string }  (stake in USDC base units, 6 decimals)
  *
  * The bot (treasury wallet):
  *   1. Mints a default squad if it hasn't yet
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const warId = BigInt(body.warId);
-    const stake = BigInt(body.stakeWei);
+    const stake = BigInt(body.stake);
 
     const pub = getPublic();
     const wallet = getBotWallet();
@@ -55,18 +57,35 @@ export async function POST(req: NextRequest) {
       result.mintTxHash = mintHash;
     }
 
-    // 2. Accept war
+    // 2. Approve the protocol to pull the bot's USDC stake (if needed)
+    const allowance = (await pub.readContract({
+      address: USDC_ADDRESS,
+      abi: USDC_ABI,
+      functionName: "allowance",
+      args: [botAddr, CONTRACT_ADDRESSES.squadWars],
+    })) as bigint;
+    if (allowance < stake) {
+      const approveHash = await wallet.writeContract({
+        address: USDC_ADDRESS,
+        abi: USDC_ABI,
+        functionName: "approve",
+        args: [CONTRACT_ADDRESSES.squadWars, stake],
+      });
+      await pub.waitForTransactionReceipt({ hash: approveHash });
+      result.approveTxHash = approveHash;
+    }
+
+    // 3. Accept war (escrows matching USDC stake)
     const acceptHash = await wallet.writeContract({
       address: CONTRACT_ADDRESSES.squadWars,
       abi: SQUAD_WARS_ABI,
       functionName: "acceptWar",
       args: [warId],
-      value: stake,
     });
     await pub.waitForTransactionReceipt({ hash: acceptHash });
     result.acceptTxHash = acceptHash;
 
-    // 3. Lock bot decision — slot 4 captain, slot 3 bench
+    // 4. Lock bot decision — slot 4 captain, slot 3 bench
     const lockHash = await wallet.writeContract({
       address: CONTRACT_ADDRESSES.squadWars,
       abi: SQUAD_WARS_ABI,

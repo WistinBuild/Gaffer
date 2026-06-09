@@ -2,7 +2,7 @@
 
 > On-chain fantasy football manager for the 2026 World Cup, built on Base.
 
-Gaffer turns the World Cup into a fully on-chain fantasy competition. Managers draft five real players as NFTs, stake ETH, and compete in head-to-head matchday wars. An on-chain Oracle posts official match results, the protocol settles each war automatically, and the winner takes 95% of the pot. Player cards permanently forge from Bronze to Icon as they accumulate tournament points.
+Gaffer turns the World Cup into a fully on-chain fantasy competition. Managers draft five real players as NFTs, stake USDC, and compete in head-to-head matchday wars. An on-chain Oracle posts official match results, the protocol settles each war automatically, and the winner takes 95% of the pot. Player cards permanently forge from Bronze to Icon as they accumulate tournament points.
 
 ## Table of contents
 
@@ -22,7 +22,7 @@ Gaffer turns the World Cup into a fully on-chain fantasy competition. Managers d
 ## Overview
 
 - **Draft once, compete all tournament.** Each address mints a bound five-player squad as ERC-721 tokens.
-- **Stake-backed 1v1 wars.** Managers stake ETH on a chosen matchday and settle against real results.
+- **Stake-backed 1v1 wars.** Managers stake USDC on a chosen matchday and settle against real results.
 - **Trustless settlement.** Scores are computed on-chain from Oracle-posted statistics using per-position scoring and World Cup stage multipliers.
 - **Persistent progression.** Tournament points accrue to each card and permanently upgrade its rarity tier.
 - **Open marketplace.** A separate ERC-721 contract sells individual player cards at deterministic, scarcity-aware prices.
@@ -54,7 +54,7 @@ Target network: **Base Sepolia** (chain ID `84532`).
 |---|---|
 | **Oracle** | Posts official matchday statistics and computes fantasy points per position. |
 | **GafferNFT** | Mints a five-player squad as five ERC-721 tokens; updates card stats on-chain each matchday. |
-| **SquadWars** | Manages war lifecycle — `createWar` / `acceptWar` / `lockDecision` / `resolveWar` — with real ETH stakes and a 95/5 winner/protocol split. |
+| **SquadWars** | Manages war lifecycle — `createWar` / `acceptWar` / `lockDecision` / `resolveWar` — with real USDC stakes and a 95/5 winner/protocol split. |
 | **PlayerMint** | Marketplace ERC-721 with an on-chain catalog of prices and supply caps (68 players: 60 current stars and 8 legends). |
 
 The full lifecycle — mint → create war → accept → Oracle post → resolve → payout → reputation update — is covered by an end-to-end integration script and the contract test suite.
@@ -89,9 +89,9 @@ The full lifecycle — mint → create war → accept → Oracle post → resolv
 │      ▼                                                       │
 │   GafferNFT ◀──reads── SquadWars ──pays──▶ winner            │
 │      │                     │                                 │
-│      │ mints               │ stakes ETH                      │
+│      │ mints               │ stakes USDC                     │
 │      ▼                     ▼                                 │
-│   ERC-721 player cards     ETH pot (95% winner, 5% protocol) │
+│   ERC-721 player cards     USDC pot (95% winner, 5% protocol)│
 │                                                              │
 │   PlayerMint (independent marketplace ERC-721)               │
 └─────────────────────────────────────────────────────────────┘
@@ -111,7 +111,8 @@ The full lifecycle — mint → create war → accept → Oracle post → resolv
 ### Prerequisites
 
 - Node.js 18+ and npm
-- A wallet with Base Sepolia ETH ([faucet](https://www.alchemy.com/faucets/base-sepolia))
+- A wallet with Base Sepolia ETH for gas ([faucet](https://www.alchemy.com/faucets/base-sepolia))
+- Test USDC on Base Sepolia for stakes and mints ([Circle faucet](https://faucet.circle.com))
 
 ### Install and run
 
@@ -148,7 +149,10 @@ NEXT_PUBLIC_ORACLE_ADDRESS=
 NEXT_PUBLIC_NFT_ADDRESS=
 NEXT_PUBLIC_SQUAD_WARS_ADDRESS=
 NEXT_PUBLIC_PLAYER_MINT_ADDRESS=
+NEXT_PUBLIC_USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
 ```
+
+All stakes and marketplace mints are paid in **USDC** (6 decimals). Because USDC is an ERC-20, each payment is a two-step flow — the app sends an `approve` transaction first, then the stake/mint — and gas is still paid in ETH.
 
 ## Deployment
 
