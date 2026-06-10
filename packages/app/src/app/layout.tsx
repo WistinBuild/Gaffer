@@ -56,6 +56,9 @@ export const metadata: Metadata = {
     images: ["/og.jpg"],
   },
   robots: { index: true, follow: true },
+  // Base App (base.dev) domain-ownership verification — renders
+  // <meta name="base:app_id" content="…"> in <head> on every page.
+  other: { "base:app_id": "6a29436a65478aa1565a96ad" },
   icons: {
     icon: [
       { url: "/logo.svg", type: "image/svg+xml" },
