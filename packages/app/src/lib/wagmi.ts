@@ -9,7 +9,7 @@ export const wcProjectId =
 
 export const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://gaffer.games";
 
-// Base Sepolia first = default target chain for the Reown AppKit modal.
+// Base mainnet first = default target chain for the Reown AppKit modal.
 export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [baseSepolia, base];
 
 export const wagmiAdapter = new WagmiAdapter({

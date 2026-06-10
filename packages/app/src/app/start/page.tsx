@@ -8,7 +8,7 @@ import { LetterWave } from "@/components/ui/HoverText";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 
-const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 type Step = {
   n: string;
@@ -22,28 +22,28 @@ const STEPS: Step[] = [
   {
     n: "01",
     title: "Connect a wallet",
-    body: "MetaMask, Rabby, Coinbase Wallet or any WalletConnect app. Gaffer auto-switches you to the Base Sepolia test network — just approve the prompt.",
+    body: "MetaMask, Rabby, Coinbase Wallet or any WalletConnect app. Gaffer auto-switches you to the Base network — just approve the prompt.",
     accent: "#D4AF37",
     links: [],
   },
   {
     n: "02",
-    title: "Grab test ETH (for gas)",
-    body: "You need a little Base Sepolia ETH to pay gas. Claim it free from a faucet — paste your wallet address.",
+    title: "Fund Base with ETH (for gas)",
+    body: "You need a little ETH on Base to pay gas — fees are tiny (fractions of a cent). Bridge from Ethereum, or withdraw ETH straight to Base from Coinbase or any exchange that supports it.",
     accent: "#7FE3C0",
     links: [
-      { label: "Coinbase faucet ↗", href: "https://portal.cdp.coinbase.com/products/faucet", external: true, primary: true },
-      { label: "Alchemy faucet ↗", href: "https://www.alchemy.com/faucets/base-sepolia", external: true },
-      { label: "QuickNode faucet ↗", href: "https://faucet.quicknode.com/base/sepolia", external: true },
+      { label: "Bridge to Base ↗", href: "https://bridge.base.org/", external: true, primary: true },
+      { label: "Buy on Coinbase ↗", href: "https://www.coinbase.com/", external: true },
     ],
   },
   {
     n: "03",
-    title: "Grab test USDC (to play)",
-    body: "Everything in Gaffer is paid in USDC — minting players and staking wars. Claim test USDC on Base Sepolia from Circle's faucet.",
+    title: "Get USDC on Base (to play)",
+    body: "Everything in Gaffer is paid in USDC — minting players and staking wars. Buy or bridge USDC on Base. Coinbase withdraws USDC to Base natively with no bridge.",
     accent: "#2775CA",
     links: [
-      { label: "Circle USDC faucet ↗", href: "https://faucet.circle.com/", external: true, primary: true },
+      { label: "Buy $GAFFER on Bankr ↗", href: "https://bankr.bot/launches/0x8259f905b85ccf6d946e60b3d19cc587ef8b2ba3", external: true, primary: true },
+      { label: "Bridge USDC ↗", href: "https://bridge.base.org/", external: true },
     ],
   },
   {
@@ -93,7 +93,7 @@ export default function StartPage() {
             <div className="inline-flex items-center gap-2 rounded-full bg-gaffer-electric/15 hairline px-3 py-1 hover-lift">
               <span className="h-1.5 w-1.5 rounded-full bg-gaffer-electric animate-live-dot" />
               <span className="font-mono text-[10px] tracking-[0.22em] text-gaffer-electric uppercase">
-                Live on Base Sepolia · Free to try
+                Live on Base mainnet · $GAFFER launched
               </span>
             </div>
             <h1 className="mt-5 font-display text-white text-6xl sm:text-8xl leading-[0.86]">
@@ -101,8 +101,8 @@ export default function StartPage() {
               <span className="text-gaffer-gold"><LetterWave text="playing." glow="gold" charDelay={30} liftPx={14} /></span>
             </h1>
             <p className="mt-4 text-white/60 max-w-xl mx-auto">
-              Gaffer runs on the Base Sepolia testnet — no real money, just claim free test
-              tokens and play. Six steps and you&apos;re managing a squad.
+              Gaffer is live on Base mainnet. Fund your wallet with a little ETH and USDC,
+              then mint your squad and play for real. Six steps and you&apos;re managing a squad.
             </p>
             <div className="mt-6 inline-block"><ConnectButton /></div>
           </div>
@@ -172,7 +172,7 @@ export default function StartPage() {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <code className="font-mono text-[13px] text-gaffer-gold break-all">{USDC_ADDRESS}</code>
-                <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 uppercase">· Base Sepolia · 6 decimals</span>
+                <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 uppercase">· Base · 6 decimals</span>
               </div>
             </div>
           </div>

@@ -25,5 +25,6 @@ export const baseSepolia = defineChain({
   testnet: true,
 });
 
+// Default to Base mainnet; only fall back to Sepolia when explicitly set.
 export const activeChain =
-  process.env.NEXT_PUBLIC_CHAIN_ID === "8453" ? base : baseSepolia;
+  process.env.NEXT_PUBLIC_CHAIN_ID === "84532" ? baseSepolia : base;

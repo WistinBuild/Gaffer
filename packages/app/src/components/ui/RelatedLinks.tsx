@@ -11,7 +11,7 @@ interface PageMeta {
 }
 
 const ALL_PAGES: PageMeta[] = [
-  { href: "/start",       label: "Start here",         sub: "Get test tokens · play in 6 steps", glyph: "▶" },
+  { href: "/start",       label: "Start here",         sub: "Fund up · play in 6 steps", glyph: "▶" },
   { href: "/squad",       label: "Squad builder",      sub: "Draft your five NFTs",         glyph: "✦" },
   { href: "/marketplace", label: "The Market",         sub: "Mint legends · trade players", glyph: "◇" },
   { href: "/wars",        label: "Squad Wars",         sub: "1v1 matchday battles",          glyph: "⚔" },

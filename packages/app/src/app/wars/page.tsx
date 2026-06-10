@@ -422,7 +422,7 @@ export default function WarsPage() {
               title={<>The <span className="text-gaffer-electric">battle list.</span></>}
               right={
                 <div className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase">
-                  Live · Base Sepolia
+                  Live · Base
                 </div>
               }
             />

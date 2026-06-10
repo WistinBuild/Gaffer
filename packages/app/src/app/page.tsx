@@ -92,7 +92,7 @@ export default function Portal() {
           <div className="reveal mt-6" style={{ ["--stagger-delay" as any]: "60ms" }}>
             <div className="mb-2 inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.25em] text-gaffer-electric/90 uppercase">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-gaffer-electric animate-live-dot" />
-              $GAFFER is live · mainnet migration in progress
+              $GAFFER is live on Base mainnet
             </div>
             <div>
               <BuyGaffer />
@@ -561,7 +561,7 @@ function SiteFooter() {
           <div className="flex items-center gap-6 font-mono text-[10px] tracking-[0.22em] uppercase">
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-gaffer-electric animate-live-dot" />
-              Testnet live
+              Live on Base
             </span>
             <span>Base · Base L2</span>
             <span>© 2026</span>

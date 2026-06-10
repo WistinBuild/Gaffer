@@ -4,9 +4,9 @@ import { parseUnits, formatUnits, type Address } from "viem";
 // USDC has 6 decimals (not 18 like ETH). All on-chain payment amounts use this.
 export const USDC_DECIMALS = 6;
 
-// Circle USDC on Base Sepolia by default; override per-network via env.
+// Circle USDC on Base mainnet by default; override per-network via env.
 export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS ||
-  "0x036CbD53842c5426634e7929541eC2318f3dCF7e") as Address;
+  "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913") as Address;
 
 // Convert a human string ("1.5") → USDC base units (1500000n).
 export function toUSDC(amount: string | number): bigint {

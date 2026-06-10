@@ -11,12 +11,12 @@
  */
 import { createPublicClient, defineChain, http } from "viem";
 
+const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "8453");
+
 const RPC_URL =
   process.env.RPC_URL ||
   process.env.NEXT_PUBLIC_RPC_URL ||
-  "https://sepolia.base.org";
-
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "84532");
+  (CHAIN_ID === 8453 ? "https://mainnet.base.org" : "https://sepolia.base.org");
 
 export const chain = defineChain({
   id: CHAIN_ID,
