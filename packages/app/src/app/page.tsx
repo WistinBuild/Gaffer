@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { XLink } from "@/components/ui/XLink";
+import { BuyGaffer } from "@/components/ui/BuyGaffer";
 import { EnterPitchButton } from "@/components/ui/EnterPitchButton";
 import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
@@ -85,6 +86,17 @@ export default function Portal() {
             <span className="ml-2 font-mono text-[10px] tracking-[0.25em] text-white/40 uppercase">
               World Cup 2026 · Base
             </span>
+          </div>
+
+          {/* $GAFFER token — live on mainnet */}
+          <div className="reveal mt-6" style={{ ["--stagger-delay" as any]: "60ms" }}>
+            <div className="mb-2 inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.25em] text-gaffer-electric/90 uppercase">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gaffer-electric animate-live-dot" />
+              $GAFFER is live · mainnet migration in progress
+            </div>
+            <div>
+              <BuyGaffer />
+            </div>
           </div>
 
           {/* Diagonal headline */}
@@ -523,7 +535,10 @@ function SiteFooter() {
               <p className="mt-3 max-w-md text-white/45 text-sm">On-chain fantasy football manager for World Cup 2026. Draft real players. Stake USDC. Forge legends.</p>
             </div>
           </div>
-          <EnterPitchButton>ENTER THE PITCH</EnterPitchButton>
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <BuyGaffer />
+            <EnterPitchButton>ENTER THE PITCH</EnterPitchButton>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-14">
           {sections.map((s) => (
