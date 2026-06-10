@@ -16,11 +16,12 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
-const RPC = process.env.RPC_URL || "https://sepolia.base.org";
-const CHAIN = Number(process.env.CHAIN_ID || "84532");
+const RPC = process.env.RPC_URL || "https://mainnet.base.org";
+const CHAIN = Number(process.env.CHAIN_ID || "8453");
 const A = {
-  nft:        "0x7c4Ca3602A251D7164F13CF7ae31465909E842DA",
-  playerMint: "0xa3f3bf7ea21BB098E19a1C9b1B5813d6404ee9eC",
+  // Base mainnet contracts (migrated 2026-06-10). Override via NFT_ADDRESS / PLAYER_MINT_ADDRESS.
+  nft:        process.env.NFT_ADDRESS        || "0x3d8c115be697ad89f5A177690C5e47b5E50eAEE2",
+  playerMint: process.env.PLAYER_MINT_ADDRESS || "0x20b53C016Eca430fc38Cae42904f85c4aDAA880A",
 };
 
 async function main() {
