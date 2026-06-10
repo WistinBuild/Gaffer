@@ -4,9 +4,10 @@
  *
  * NEVER import this from a client component.
  */
-import { createPublicClient, createWalletClient, defineChain, http, type Address } from "viem";
+import { createPublicClient, createWalletClient, http, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+import { activeChain, base, baseSepolia } from "@/lib/chains";
 import {
   CONTRACT_ADDRESSES,
   SQUAD_WARS_ABI,
@@ -15,18 +16,11 @@ import {
 } from "@/lib/contracts";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/usdc";
 
-// ─── Base Sepolia ──────────────────────────────────────────────────────────
-export const baseSepolia = defineChain({
-  id: 84532,
-  name: "Base Sepolia",
-  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://sepolia.base.org"] },
-  },
-  blockExplorers: {
-    default: { name: "BaseScan", url: "https://sepolia.basescan.org" },
-  },
-});
+export { activeChain, base, baseSepolia };
+
+// Server-only RPC (may embed a provider key). Falls back to the chain default
+// (mainnet.base.org / sepolia.base.org) when unset.
+const RPC_URL = process.env.RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || undefined;
 
 function getTreasuryKey(): `0x${string}` {
   const raw = process.env.TREASURY_PRIVATE_KEY;
@@ -43,14 +37,14 @@ export function getBotAccount() {
 }
 
 export function getPublic() {
-  return createPublicClient({ chain: baseSepolia, transport: http() });
+  return createPublicClient({ chain: activeChain, transport: http(RPC_URL) });
 }
 
 export function getBotWallet() {
   return createWalletClient({
     account: getBotAccount(),
-    chain: baseSepolia,
-    transport: http(),
+    chain: activeChain,
+    transport: http(RPC_URL),
   });
 }
 
