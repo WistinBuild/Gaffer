@@ -1,0 +1,77 @@
+GAFFER — LAUNCH TWEETS (live on Base Sepolia)
+Attach the intro video (packages/app/public/gaffer-intro.mp4 / gaffer.games/gaffer-intro.mp4) to the main tweet.
+================================================================
+
+
+[A] PRIMARY LAUNCH TWEET (recommended)
+------------------------------------------------
+⚽️ GAFFER is LIVE on Base Sepolia.
+
+On-chain fantasy football for World Cup 2026:
+◇ Draft real players as NFTs
+◇ Stake USDC, outscore rivals on matchday
+◇ Winner takes 95% of the pot
+◇ Forge cards Bronze → Icon
+
+Mint legends from 1 USDC 👇
+🔗 gaffer.games
+
+
+[B] PUNCHY / HYPE VARIANT
+------------------------------------------------
+The pitch just went on-chain. ⚽️🟦
+
+GAFFER is live on @base Sepolia — draft World Cup icons as NFTs, stake USDC, and battle head-to-head every matchday. Winner takes 95%.
+
+Your squad. Your call. Your pot.
+
+Play → gaffer.games
+
+
+[C] SHORT & CLEAN VARIANT
+------------------------------------------------
+GAFFER is live on Base Sepolia. ⚽️
+
+Draft real players as NFTs → stake USDC → outscore your rival on matchday → winner takes the pot.
+
+Forge legends from Bronze to Icon.
+
+gaffer.games · built on @base
+
+
+[D] THREAD VERSION
+------------------------------------------------
+1/
+⚽️ Introducing GAFFER — on-chain fantasy football for World Cup 2026, now live on Base Sepolia.
+
+Draft. Stake. Battle. Forge legends.
+
+🧵👇 gaffer.games
+
+2/
+🃏 Your squad is yours — on-chain.
+
+Mint 5 real World Cup players as ERC-721 cards. Icons like Pelé, Maradona & Zidane start from just 1 USDC.
+
+3/
+⚔️ Squad Wars.
+
+Stake USDC, pick your captain, and outscore a rival on matchday. An on-chain Oracle posts the real results and settles automatically — winner takes 95% of the pot.
+
+4/
+🏆 Cards that grow with you.
+
+Every point your players earn forges their card permanently — Bronze → Silver → Gold → Icon. Your wins live on-chain forever.
+
+5/
+🟦 Live now on Base Sepolia (testnet). Grab some test USDC and play.
+
+🔗 gaffer.games
+Follow @gaffer_game for the mainnet drop.
+
+
+================================================================
+Notes:
+- Honest framing: it's Base Sepolia (testnet), not mainnet — keeps it credible.
+- Handle: @gaffer_game   Site: gaffer.games
+- Suggested hashtags (optional, append to taste): #Base #onchain #WorldCup2026 #fantasyfootball

@@ -21,11 +21,11 @@ export const metadata: Metadata = {
     template: "%s · GAFFER",
   },
   description:
-    "Draft 5 World Cup 2026 players as NFTs. Stake USDC. Outscore your opponent on matchday. Live on Base.",
+    "Draft 5 World Cup 2026 players as NFTs. Stake USDC. Outscore your opponent on matchday. Live on Base Sepolia.",
   applicationName: "GAFFER",
   keywords: [
     "Base",
-    "Base",
+    "Base Sepolia",
     "fantasy football",
     "World Cup 2026",
     "NFT",
@@ -37,17 +37,23 @@ export const metadata: Metadata = {
   openGraph: {
     title: "GAFFER — On-chain Fantasy Football",
     description:
-      "Draft 5 World Cup 2026 players. Stake USDC. Outscore your opponent. Live on Base.",
+      "Draft 5 World Cup 2026 players as NFTs. Stake USDC. Outscore your rival on matchday. Live on Base Sepolia.",
     siteName: "GAFFER",
     type: "website",
     locale: "en_US",
+    url: "/",
+    images: [
+      { url: "/og.jpg", width: 1200, height: 630, alt: "GAFFER — on-chain fantasy football, live on Base Sepolia" },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "GAFFER — On-chain Fantasy Football",
     description:
-      "Draft 5 World Cup 2026 players. Stake USDC. Outscore your opponent. Live on Base.",
-    creator: "@gaffergg",
+      "Draft players as NFTs. Stake USDC. Outscore your rival. Forge Bronze → Icon. Live on Base Sepolia.",
+    site: "@gaffer_game",
+    creator: "@gaffer_game",
+    images: ["/og.jpg"],
   },
   robots: { index: true, follow: true },
   icons: {

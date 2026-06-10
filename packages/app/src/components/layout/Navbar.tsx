@@ -10,6 +10,7 @@ import { playClick, playHover, unlockAudio } from "@/lib/sounds";
 // Three clusters separated by visual dividers in the pill nav
 const LINK_GROUPS: { label: string; href: string; group: "play" | "discover" | "you" }[] = [
   // PLAY — what you do
+  { href: "/start",       label: "Start",  group: "play" },
   { href: "/squad",       label: "Squad",  group: "play" },
   { href: "/wars",        label: "Wars",   group: "play" },
   { href: "/match/12",    label: "Match",  group: "play" },
