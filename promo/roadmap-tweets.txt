@@ -1,0 +1,83 @@
+GAFFER — ROADMAP + $GAFFER FLYWHEEL
+Images: packages/app/public/gaffer-roadmap.jpg (roadmap)  ·  gaffer-flywheel.jpg (flywheel)
+$GAFFER CA (Base): 0x8259F905B85CCF6d946e60B3d19cc587EF8B2bA3
+Buy on Bankr: https://bankr.bot/launches/0x8259f905b85ccf6d946e60b3d19cc587ef8b2ba3
+================================================================
+
+
+[A] SINGLE POST — ROADMAP (attach gaffer-roadmap.jpg)
+------------------------------------------------
+The GAFFER Roadmap. 🟦⚽️
+
+Where on-chain fantasy football goes from here:
+
+① LAUNCH — live on Base, $GAFFER out, mint & battle
+② $GAFFER UTILITY — reward + in-game token
+③ BUYBACK FLYWHEEL — mint revenue buys back $GAFFER
+④ WORLD CUP 2026 — live matchday scoring & prize pots
+
+Built for the long game. 🔗 gaffer.games
+
+
+[B] SINGLE POST — FLYWHEEL (attach gaffer-flywheel.jpg)
+------------------------------------------------
+The $GAFFER Flywheel. 🔁
+
+$GAFFER is the reward + in-game token at the center of GAFFER:
+
+1️⃣ Players mint player NFTs → pay in USDC
+2️⃣ That USDC buys back $GAFFER on-market
+3️⃣ $GAFFER is paid out to winners & stakers
+4️⃣ More players join → more mints → repeat
+
+Real revenue. Real buybacks. One loop.
+gaffer.games
+
+
+[C] THREAD (roadmap + flywheel together — recommended)
+------------------------------------------------
+1/  📍 The GAFFER Roadmap is here.
+
+On-chain fantasy football, built for the long game — and powered by a token with real utility and real demand.
+
+Here's where we're headed 🧵👇
+(attach gaffer-roadmap.jpg)
+
+2/  ✅ PHASE 1 — LAUNCH (live now)
+• Live on Base mainnet
+• $GAFFER token launched
+• Mint World Cup players as NFTs
+• Squad Wars 1v1 — an on-chain Oracle settles every matchday
+
+3/  🪙 PHASE 2 — $GAFFER UTILITY
+$GAFFER becomes the heart of the game:
+• In-game token — mint & stake with $GAFFER
+• Reward token — earn it for wins & forging cards
+• Staking & holder perks
+
+4/  🔁 PHASE 3 — THE BUYBACK FLYWHEEL
+This is the engine:
+• Players mint NFTs and pay in USDC
+• That USDC is used to BUY BACK $GAFFER on the market
+• $GAFFER flows back to players as rewards
+• Rewards bring more players → more mints → more buybacks
+(attach gaffer-flywheel.jpg)
+
+5/  🏆 PHASE 4 — WORLD CUP 2026
+• Live WC2026 matchday scoring
+• Seasonal leaderboards & prize pots
+• Tournaments & community governance
+
+6/  Real gameplay. Real revenue. A token that compounds with it.
+
+Play now → gaffer.games
+$GAFFER → bankr.bot/launches/0x8259f905b85ccf6d946e60b3d19cc587ef8b2ba3
+Follow @gaffer_game
+
+
+================================================================
+Notes:
+- The flywheel is the headline idea: NFT-mint USDC → $GAFFER buyback; $GAFFER as reward + in-game token.
+- Keep claims directional (no fixed dates) — phases, not deadlines.
+- Handle: @gaffer_game · Site: gaffer.games
+- Optional hashtags: #Base #onchain #WorldCup2026 #GAFFER
