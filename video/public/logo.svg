@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gaffer">
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#161D28"/>
+      <stop offset="100%" stop-color="#0B0E14"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0.15" y1="0.05" x2="0.85" y2="0.95">
+      <stop offset="0%" stop-color="#F6E29A"/>
+      <stop offset="42%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#A87E22"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge -->
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#badge)"/>
+  <rect x="24.5" y="24.5" width="463" height="463" rx="115.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.07"/>
+  <rect x="40" y="40" width="432" height="432" rx="100" fill="none" stroke="#D4AF37" stroke-opacity="0.16" stroke-width="1.5"/>
+
+  <!-- G monogram -->
+  <path d="M256 256 L367 256 A111 111 0 1 1 341 185"
+        fill="none" stroke="url(#gold)" stroke-width="44"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Emerald accent terminal -->
+  <circle cx="256" cy="256" r="13" fill="#22C58D"/>
+</svg>
