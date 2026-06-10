@@ -10,7 +10,14 @@ export const wcProjectId =
 export const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://gaffer.games";
 
 // Base mainnet first = default target chain for the Reown AppKit modal.
-export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [baseSepolia, base];
+// (Sepolia kept available for testing via NEXT_PUBLIC_CHAIN_ID=84532.)
+export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [base, baseSepolia];
+
+// Mirror lib/chains.ts: default to Base mainnet, fall back to Sepolia only when
+// explicitly set. Keeps the connect modal's default network in sync with the
+// chain the app actually reads/writes against.
+export const defaultNetwork =
+  process.env.NEXT_PUBLIC_CHAIN_ID === "84532" ? baseSepolia : base;
 
 export const wagmiAdapter = new WagmiAdapter({
   projectId: wcProjectId,
