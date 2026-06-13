@@ -31,8 +31,10 @@ echo "▶ Building (cargo-build-sbf)…"
 cargo-build-sbf
 
 # Deploy each program in dependency order. Oracle first (SquadWars reads it).
-for PROG in oracle; do
-  SO="target/deploy/${PROG}.so"
+# Already-deployed programs are re-deployed as in-place upgrades (idempotent).
+PROGS="${1:-oracle gaffer-nft player-mint squad-wars}"
+for PROG in $PROGS; do
+  SO="target/deploy/${PROG//-/_}.so"   # crate names use underscores in .so
   KP="${PROG}-program-keypair.json"
   echo "▶ Deploying $PROG ($SO)…"
   solana program deploy "$SO" \

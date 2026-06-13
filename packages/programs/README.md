@@ -9,12 +9,28 @@ package holds the Anchor (Rust) ports of the original contracts in
 | Solidity contract | Solana program | Status |
 | ----------------- | -------------- | ------ |
 | `Oracle.sol`      | `programs/oracle` | ✅ ported, **deployed + initialized on devnet** |
-| `GafferNFT.sol`   | `programs/gaffer-nft` | ⏳ next (Metaplex Core squad NFTs) |
-| `PlayerMint.sol`  | `programs/player-mint` | ⏳ next (SPL/USDC payment + Metaplex) |
-| `SquadWars.sol`   | `programs/squad-wars` | ⏳ next (USDC escrow PDA + oracle scoring) |
+| `GafferNFT.sol`   | `programs/gaffer-nft` | ✅ ported, **deployed + initialized on devnet** |
+| `PlayerMint.sol`  | `programs/player-mint` | ✅ ported + builds; deploy pending SOL |
+| `SquadWars.sol`   | `programs/squad-wars` | ✅ ported + builds; deploy pending SOL |
 
 The Oracle is the dependency root (SquadWars reads its scoring), so it is ported
 first and serves as the pattern for the rest.
+
+### Design notes for the port
+
+- **NFTs are program-owned PDAs, not Metaplex tokens.** Squad cards
+  (`["card", owner, slot]`) and minted players (`["token", token_id]`) are plain
+  Anchor accounts. This faithfully ports the game state (soulbound squads, catalog
+  scarcity) without pulling Metaplex into the build. Wrapping them as tradeable
+  Metaplex NFTs is future work and orthogonal to the game logic.
+- **USDC via `anchor-spl`.** `player-mint` and `squad-wars` take SPL-token USDC.
+  Stakes/payments escrow into a program vault PDA (`["vault"]`) and pay out signed
+  by that PDA.
+- **SquadWars scoring trade-off.** Solidity's `resolveWar` recomputed scores
+  on-chain from the Oracle + NFT. The port instead accepts scores from the
+  authorized `resolver` (the same trusted oracle/bot authority) and keeps the
+  money path — escrow, 5% fee, payout, draw refund — fully on-chain. Trustless
+  on-chain scoring (reading oracle/nft PDAs per slot) is future work.
 
 ## Addresses
 
@@ -23,6 +39,10 @@ first and serves as the pattern for the rest.
 | Deployer / authority wallet | `D1EZqSobg2M1itFS24WLaJpWkWFDXQ17p9azLMdw44d6` |
 | Oracle program ID | `3byJrFHoZ4v9tTo9XAKn1KrE82LZSAxwqMDijVXMf5Yb` |
 | OracleState PDA (`["oracle"]`) | `3Uk8BCtKtk6TTkQKkJYG6531G7UhLXzLH3AjWXrvbTuZ` |
+| GafferNFT program ID | `Fhk54QhcVjY7phpxzF7HCPa6STsYD1FN8Jfwk2irdkGf` |
+| NftConfig PDA (`["config"]`) | `GuEy32ZotTzNLLhsHQCVLwry9HLwe7AnV65TyXtnxTrU` |
+| PlayerMint program ID | `D9xiskVonYcZs3zMnjeKS9HY27s2fcBxTD3Jw5op2XoY` (deploy pending) |
+| SquadWars program ID | `25MeET8DMNgM8VCJTXxDQVPAaJsp5HezyhypofbYdaqh` (deploy pending) |
 | Cluster | devnet |
 
 Deployed + initialized 2026-06-13:

@@ -6,6 +6,9 @@ skip-lint = false
 
 [programs.devnet]
 oracle = "3byJrFHoZ4v9tTo9XAKn1KrE82LZSAxwqMDijVXMf5Yb"
+gaffer_nft = "Fhk54QhcVjY7phpxzF7HCPa6STsYD1FN8Jfwk2irdkGf"
+player_mint = "D9xiskVonYcZs3zMnjeKS9HY27s2fcBxTD3Jw5op2XoY"
+squad_wars = "25MeET8DMNgM8VCJTXxDQVPAaJsp5HezyhypofbYdaqh"
 
 [registry]
 url = "https://api.apr.dev"
