@@ -8,7 +8,7 @@ package holds the Anchor (Rust) ports of the original contracts in
 
 | Solidity contract | Solana program | Status |
 | ----------------- | -------------- | ------ |
-| `Oracle.sol`      | `programs/oracle` | ✅ ported, builds |
+| `Oracle.sol`      | `programs/oracle` | ✅ ported, **deployed + initialized on devnet** |
 | `GafferNFT.sol`   | `programs/gaffer-nft` | ⏳ next (Metaplex Core squad NFTs) |
 | `PlayerMint.sol`  | `programs/player-mint` | ⏳ next (SPL/USDC payment + Metaplex) |
 | `SquadWars.sol`   | `programs/squad-wars` | ⏳ next (USDC escrow PDA + oracle scoring) |
@@ -22,7 +22,14 @@ first and serves as the pattern for the rest.
 | ---- | ----- |
 | Deployer / authority wallet | `D1EZqSobg2M1itFS24WLaJpWkWFDXQ17p9azLMdw44d6` |
 | Oracle program ID | `3byJrFHoZ4v9tTo9XAKn1KrE82LZSAxwqMDijVXMf5Yb` |
+| OracleState PDA (`["oracle"]`) | `3Uk8BCtKtk6TTkQKkJYG6531G7UhLXzLH3AjWXrvbTuZ` |
 | Cluster | devnet |
+
+Deployed + initialized 2026-06-13:
+- deploy tx `T2oefe5sv6mdC4EBf2CbBotsLtMmLk1CSnPRshwKQopS1aSoBD91Ccyx6iY6qh6k7wdoK4oGPFpNuVdpYF7eETp`
+- initialize tx `5TvL7qb7cHmfd7ks3jKmYecBFNcMbufApJV3wTGfgaZRAn7acGnn1NMmU287odeGez71pyWjTsLEn25y1mBU5dG7`
+- OracleState verified: owner = deployer, stage = Group(0), matchday = 1, multipliers = [100,120,150,200,300]
+- Explorer: <https://explorer.solana.com/address/3byJrFHoZ4v9tTo9XAKn1KrE82LZSAxwqMDijVXMf5Yb?cluster=devnet>
 
 The Oracle **program ID** is fixed by `oracle-program-keypair.json` (git-ignored;
 keep it backed up — it is the upgrade authority). It is declared in `Anchor.toml`
@@ -44,9 +51,11 @@ Check balance: `solana balance -k ../../.solana/devnet-keypair.json --url devnet
 # from packages/programs
 cargo-build-sbf                 # builds target/deploy/oracle.so
 bash scripts/deploy-devnet.sh   # checks balance, builds, deploys oracle
+node scripts/init-oracle.mjs    # one-time: create + seed the OracleState PDA
 ```
 
 `deploy-devnet.sh` aborts with the faucet link if the wallet is empty.
+`init-oracle.mjs` is safe to re-run — it no-ops if OracleState already exists.
 
 ## Oracle program — instructions
 
