@@ -550,7 +550,7 @@ function SiteFooter() {
           <div className="flex items-center gap-6 font-mono text-[10px] tracking-[0.22em] uppercase">
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-gaffer-electric animate-live-dot" />
-              Live on Base
+              Live on Solana
             </span>
             <span>Base · Base L2</span>
             <span>© 2026</span>

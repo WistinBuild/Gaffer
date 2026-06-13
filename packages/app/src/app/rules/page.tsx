@@ -110,7 +110,7 @@ export default function RulesPage() {
                   <div className="-rotate-[3deg]"><PlayerCard player={pick("rodri")} rarity="GOLD" size="sm" tilt={false} /></div>
                 </div>
                 <p className="text-white/65 text-sm leading-relaxed">
-                  Pick exactly <HoverWord glow="electric">one goalkeeper</HoverWord> + four outfield players. Your squad mints as 5 ERC-721 NFTs you own forever.
+                  Pick exactly <HoverWord glow="electric">one goalkeeper</HoverWord> + four outfield players. Your squad mints as 5 on-chain NFTs you own forever.
                 </p>
               </RuleTile>
 

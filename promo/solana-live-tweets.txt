@@ -1,0 +1,73 @@
+GAFFER — SOLANA DEVNET LIVE ANNOUNCEMENT
+Attach image: packages/app/public/solana-live.jpg (1600x900)
+Site: gaffer.games   Handle: @gaffer_game
+Programs (devnet):
+  Oracle      3byJrFHoZ4v9tTo9XAKn1KrE82LZSAxwqMDijVXMf5Yb
+  GafferNFT   Fhk54QhcVjY7phpxzF7HCPa6STsYD1FN8Jfwk2irdkGf
+  PlayerMint  D9xiskVonYcZs3zMnjeKS9HY27s2fcBxTD3Jw5op2XoY
+  SquadWars   25MeET8DMNgM8VCJTXxDQVPAaJsp5HezyhypofbYdaqh
+================================================================
+
+
+[A] PRIMARY ANNOUNCEMENT (recommended)
+------------------------------------------------
+GAFFER is now playing on @solana. 🟣🟢⚽️
+
+We ported the whole on-chain layer to Solana — live on devnet today:
+
+◇ Draft World Cup players as on-chain NFTs
+◇ Stake USDC head-to-head
+◇ On-chain Oracle settles · winner takes 95%
+◇ Forge cards Bronze → Icon
+
+4 Anchor programs, all live. Try it 👇
+🔗 gaffer.games
+
+
+[B] PUNCHY / HYPE VARIANT
+------------------------------------------------
+New chain. Same game, faster. 🟣
+
+GAFFER is live on @solana devnet — draft real players as NFTs, stake USDC, outscore your rival every matchday. Winner takes the pot, settled on-chain.
+
+Squad up → gaffer.games
+
+
+[C] SHORT & CLEAN VARIANT
+------------------------------------------------
+GAFFER is LIVE on Solana devnet. ⚽️
+
+On-chain fantasy football — draft NFTs, stake USDC, winner takes 95%.
+Now running on 4 Anchor programs.
+
+Play → gaffer.games · built on @solana
+
+
+[D] BUILDER / TECH REPLY (pin under the main tweet)
+------------------------------------------------
+Full Solana port — 4 Anchor programs live on devnet:
+
+◇ Oracle — matchday results + stage-weighted scoring
+◇ GafferNFT — soulbound 5-player squads
+◇ PlayerMint — USDC-priced player catalog
+◇ SquadWars — USDC-escrowed PvP, on-chain payout
+
+Pay in USDC (SPL). Connect a Solana wallet on gaffer.games.
+
+
+[E] "TRY IT" REPLY (devnet onboarding)
+------------------------------------------------
+It's on devnet — free to try:
+1. Connect a Solana wallet (set it to Devnet)
+2. Grab devnet SOL: faucet.solana.com
+3. Draft your five, stake, and battle
+
+gaffer.games
+
+
+================================================================
+Notes:
+- Be clear it's DEVNET (a public test run) — don't imply mainnet.
+- Handle: @gaffer_game   Site: gaffer.games
+- Mentions: @solana   Optional hashtags: #Solana #onchain #WorldCup2026 #GAFFER
+- No token CTA: $GAFFER (Base) is separate; keep this announcement gameplay-only.

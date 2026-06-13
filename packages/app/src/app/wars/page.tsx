@@ -404,7 +404,7 @@ export default function WarsPage() {
                 <div className="flex items-center gap-3">
                   <span className={`h-2 w-2 rounded-full ${txDone ? "bg-gaffer-electric animate-live-dot" : "bg-gaffer-gold animate-live-dot"}`} />
                   <span className="font-mono text-[11px] tracking-[0.22em] uppercase text-white/80">
-                    {txDone ? "Confirmed on Base" : "Awaiting wallet…"}
+                    {txDone ? "Confirmed on Solana" : "Awaiting wallet…"}
                   </span>
                 </div>
                 {txSig && (

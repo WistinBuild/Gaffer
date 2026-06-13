@@ -170,7 +170,7 @@ export default function MarketplacePage() {
                 </span>
               </h1>
               <p className="mt-4 text-white/55 max-w-xl">
-                Every player is an ERC-721 on Base. Price scales with rating, scarcity, and
+                Every player is an on-chain NFT on Solana. Price scales with rating, scarcity, and
                 whether you're buying a current star or a World Cup icon.
               </p>
             </div>

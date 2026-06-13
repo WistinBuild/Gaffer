@@ -28,21 +28,20 @@ const STEPS: Step[] = [
   },
   {
     n: "02",
-    title: "Fund Base with ETH (for gas)",
-    body: "You need a little ETH on Base to pay gas — fees are tiny (fractions of a cent). Bridge from Ethereum, or withdraw ETH straight to Base from Coinbase or any exchange that supports it.",
-    accent: "#7FE3C0",
+    title: "Get devnet SOL (for gas)",
+    body: "Gaffer runs on Solana devnet. You need a little devnet SOL to pay gas — fees are a fraction of a cent. Set your wallet to Devnet and grab some free from the faucet.",
+    accent: "#14F195",
     links: [
-      { label: "Bridge to Base ↗", href: "https://bridge.base.org/", external: true, primary: true },
-      { label: "Buy on Coinbase ↗", href: "https://www.coinbase.com/", external: true },
+      { label: "Solana faucet ↗", href: "https://faucet.solana.com/", external: true, primary: true },
     ],
   },
   {
     n: "03",
-    title: "Get USDC on Base (to play)",
-    body: "Everything in Gaffer is paid in USDC — minting players and staking wars. Buy or bridge USDC on Base. Coinbase withdraws USDC to Base natively with no bridge.",
+    title: "Get devnet USDC (to play)",
+    body: "Everything in Gaffer is paid in USDC (SPL) — minting players and staking wars. On devnet you can grab test USDC from a Solana faucet that supports the SPL USDC mint.",
     accent: "#2775CA",
     links: [
-      { label: "Bridge USDC ↗", href: "https://bridge.base.org/", external: true, primary: true },
+      { label: "SPL token faucet ↗", href: "https://spl-token-faucet.com/?token-name=USDC-Dev", external: true, primary: true },
     ],
   },
   {
@@ -92,7 +91,7 @@ export default function StartPage() {
             <div className="inline-flex items-center gap-2 rounded-full bg-gaffer-electric/15 hairline px-3 py-1 hover-lift">
               <span className="h-1.5 w-1.5 rounded-full bg-gaffer-electric animate-live-dot" />
               <span className="font-mono text-[10px] tracking-[0.22em] text-gaffer-electric uppercase">
-                Live on Base mainnet · $GAFFER launched
+                Live on Solana devnet
               </span>
             </div>
             <h1 className="mt-5 font-display text-white text-6xl sm:text-8xl leading-[0.86]">
@@ -100,8 +99,8 @@ export default function StartPage() {
               <span className="text-gaffer-gold"><LetterWave text="playing." glow="gold" charDelay={30} liftPx={14} /></span>
             </h1>
             <p className="mt-4 text-white/60 max-w-xl mx-auto">
-              Gaffer is live on Base mainnet. Fund your wallet with a little ETH and USDC,
-              then mint your squad and play for real. Six steps and you&apos;re managing a squad.
+              Gaffer is live on Solana devnet. Fund your wallet with a little devnet SOL and USDC,
+              then mint your squad and play. Six steps and you&apos;re managing a squad.
             </p>
             <div className="mt-6 inline-block"><ConnectButton /></div>
           </div>
@@ -179,7 +178,7 @@ export default function StartPage() {
           {/* CTA footer */}
           <div className="mt-12 text-center">
             <p className="font-mono text-[11px] tracking-[0.22em] text-white/40 uppercase">
-              Built on Base · Follow{" "}
+              Built on Solana · Follow{" "}
               <a href="https://x.com/gaffer_game" target="_blank" rel="noopener noreferrer" className="text-gaffer-gold hover:text-white transition-colors">@gaffer_game</a>
             </p>
           </div>

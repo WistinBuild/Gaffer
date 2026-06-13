@@ -913,7 +913,7 @@ function CompletePanel({ state, warId, isRealWar, onContinue }: { state: MatchSt
             </div>
             {finalizeResult?.resolveTxHash && (
               <a
-                href={`https://sepolia.basescan.org/tx/${finalizeResult.resolveTxHash}`}
+                href={`https://explorer.solana.com/tx/${finalizeResult.resolveTxHash}?cluster=devnet`}
                 target="_blank" rel="noreferrer"
                 className="block mt-3 font-mono text-[10px] tracking-[0.22em] text-gaffer-gold hover:brightness-110 underline uppercase"
               >
