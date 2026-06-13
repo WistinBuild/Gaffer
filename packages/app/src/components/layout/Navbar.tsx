@@ -100,7 +100,7 @@ export function Navbar() {
             <XLink size={16} />
           </div>
 
-          {/* Buy $GAFFER on Bankr */}
+          {/* $GAFFER contract address */}
           <div className="hidden lg:block">
             <BuyGaffer variant="compact" />
           </div>

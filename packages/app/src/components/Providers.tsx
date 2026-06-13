@@ -3,19 +3,21 @@
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppKit } from "@reown/appkit/react";
-import { wagmiAdapter, wagmiConfig, wcProjectId, networks, defaultNetwork, appUrl } from "@/lib/wagmi";
+import { wagmiAdapter, wagmiConfig, wcProjectId, networks, appUrl } from "@/lib/wagmi";
+import { solanaAdapter, solanaDefaultNetwork } from "@/lib/solana";
 import { ChainGuard } from "@/components/ChainGuard";
 import { useState } from "react";
 
 // Reown AppKit — the unified "Connect Wallet" modal (WalletConnect + injected
-// wallets in one branded popup). Created once at module scope; defaults the
-// network to Base mainnet (in sync with lib/chains.ts activeChain). Wallet-only
-// (no email/social login).
+// wallets in one branded popup). Created once at module scope. The app is
+// migrating its on-chain layer to Solana devnet, so the modal defaults to
+// Solana devnet; the EVM networks remain available while the contracts are
+// ported to Anchor. Wallet-only (no email/social login).
 createAppKit({
-  adapters: [wagmiAdapter],
+  adapters: [solanaAdapter, wagmiAdapter],
   projectId: wcProjectId,
-  networks,
-  defaultNetwork,
+  networks: [solanaDefaultNetwork, ...networks],
+  defaultNetwork: solanaDefaultNetwork,
   metadata: {
     name: "Gaffer",
     description: "On-chain fantasy football manager",

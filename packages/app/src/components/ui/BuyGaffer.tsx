@@ -4,11 +4,11 @@ import { useState } from "react";
 import { GAFFER_TOKEN, shortCA } from "@/lib/token";
 
 /**
- * $GAFFER token bar — shows the contract address (copy-to-clipboard) and a
- * "Buy on Bankr" CTA. Used on the home hero and in the footer.
+ * $GAFFER token bar — shows the contract address (copy-to-clipboard).
+ * Used on the home hero and in the footer.
  *
- * variant="bar"     → full glass strip with label + CA + button (hero)
- * variant="compact" → just the Buy button (navbar / tight spots)
+ * variant="bar"     → full glass strip with label + CA (hero)
+ * variant="compact" → just the copyable CA chip (navbar / tight spots)
  */
 export function BuyGaffer({
   variant = "bar",
@@ -30,7 +30,7 @@ export function BuyGaffer({
   };
 
   if (variant === "compact") {
-    return <BankrButton className={className} />;
+    return <CopyCA copied={copied} copy={copy} className={className} />;
   }
 
   return (
@@ -48,45 +48,38 @@ export function BuyGaffer({
         </span>
 
         {/* copyable CA */}
-        <button
-          type="button"
-          onClick={copy}
-          title="Copy contract address"
-          className="group inline-flex items-center gap-2 rounded-full px-2 py-1
-            font-mono text-[11px] tracking-[0.06em] text-white/70 hover:text-white
-            transition-colors duration-150"
-        >
-          <span className="hidden sm:inline">CA</span>
-          <span className="tabular-nums">{shortCA()}</span>
-          <span
-            className={`inline-flex items-center text-[10px] tracking-[0.18em] uppercase
-              ${copied ? "text-gaffer-electric" : "text-white/35 group-hover:text-white/60"}`}
-          >
-            {copied ? "Copied ✓" : "Copy"}
-          </span>
-        </button>
-
-        <BankrButton />
+        <CopyCA copied={copied} copy={copy} />
       </div>
     </div>
   );
 }
 
-function BankrButton({ className = "" }: { className?: string }) {
+function CopyCA({
+  copied,
+  copy,
+  className = "",
+}: {
+  copied: boolean;
+  copy: () => void;
+  className?: string;
+}) {
   return (
-    <a
-      href={GAFFER_TOKEN.bankrUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`group inline-flex items-center gap-2 rounded-full
-        bg-gaffer-gold px-4 py-2 text-gaffer-black font-semibold text-[13px] tracking-wider
-        transition-transform duration-150 ease-out-strong active:scale-[0.97]
-        hover:shadow-[0_0_24px_-4px_rgba(212,175,55,0.6)] ${className}`}
+    <button
+      type="button"
+      onClick={copy}
+      title="Copy contract address"
+      className={`group inline-flex items-center gap-2 rounded-full px-2 py-1
+        font-mono text-[11px] tracking-[0.06em] text-white/70 hover:text-white
+        transition-colors duration-150 ${className}`}
     >
-      <span>Buy on Bankr</span>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M7 17L17 7M17 7H8M17 7V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </a>
+      <span className="hidden sm:inline">CA</span>
+      <span className="tabular-nums">{shortCA()}</span>
+      <span
+        className={`inline-flex items-center text-[10px] tracking-[0.18em] uppercase
+          ${copied ? "text-gaffer-electric" : "text-white/35 group-hover:text-white/60"}`}
+      >
+        {copied ? "Copied ✓" : "Copy"}
+      </span>
+    </button>
   );
 }

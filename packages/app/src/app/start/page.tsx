@@ -42,8 +42,7 @@ const STEPS: Step[] = [
     body: "Everything in Gaffer is paid in USDC — minting players and staking wars. Buy or bridge USDC on Base. Coinbase withdraws USDC to Base natively with no bridge.",
     accent: "#2775CA",
     links: [
-      { label: "Buy $GAFFER on Bankr ↗", href: "https://bankr.bot/launches/0x8259f905b85ccf6d946e60b3d19cc587ef8b2ba3", external: true, primary: true },
-      { label: "Bridge USDC ↗", href: "https://bridge.base.org/", external: true },
+      { label: "Bridge USDC ↗", href: "https://bridge.base.org/", external: true, primary: true },
     ],
   },
   {

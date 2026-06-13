@@ -1,5 +1,7 @@
 # Gaffer
 
+[![Featured on Orynth](https://orynth.dev/api/badge/gaffer-games?theme=light&style=minimal)](https://orynth.dev/projects/gaffer-games)
+
 > On-chain fantasy football manager for the 2026 World Cup, built on Base.
 
 Gaffer turns the World Cup into a fully on-chain fantasy competition. Managers draft five real players as NFTs, stake USDC, and compete in head-to-head matchday wars. An on-chain Oracle posts official match results, the protocol settles each war automatically, and the winner takes 95% of the pot. Player cards permanently forge from Bronze to Icon as they accumulate tournament points.

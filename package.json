@@ -12,5 +12,9 @@
     "test:contracts": "npm run test --workspace=packages/contracts",
     "deploy:testnet": "npm run deploy:testnet --workspace=packages/contracts",
     "deploy:mainnet": "npm run deploy:mainnet --workspace=packages/contracts"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }

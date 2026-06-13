@@ -118,7 +118,7 @@ const svg = `
           font-size="24" letter-spacing="3" fill="#E7C75A">$GAFFER</text>
     <text x="${CX-150}" y="637" text-anchor="start"
           font-family="DejaVu Sans Mono, monospace" font-weight="bold"
-          font-size="21" letter-spacing="1" fill="#FFFFFF" fill-opacity="0.92">IS LIVE  ·  BUY ON BANKR</text>
+          font-size="21" letter-spacing="1" fill="#FFFFFF" fill-opacity="0.92">IS LIVE</text>
   </g>
 
   <!-- tagline -->

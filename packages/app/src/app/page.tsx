@@ -573,6 +573,20 @@ function SiteFooter() {
             <Link href="/profile" className="hover:text-white transition-colors hover-word hover-word-white">My gaffer</Link>
             <span className="h-3 w-px bg-white/10" />
             <XLink size={15} />
+            <a
+              href="https://orynth.dev/projects/gaffer-games"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover-lift"
+            >
+              <img
+                src="https://orynth.dev/api/badge/gaffer-games?theme=light&style=minimal"
+                alt="Featured on Orynth"
+                width={152}
+                height={48}
+                draggable={false}
+              />
+            </a>
           </div>
         </div>
       </div>

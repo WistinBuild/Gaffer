@@ -16,3 +16,6 @@ skills-lock.json
 
 # Local screenshots
 Screenshot*.png
+
+# Solana wallet secrets (never commit)
+.solana/
