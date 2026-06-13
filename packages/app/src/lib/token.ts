@@ -1,13 +1,12 @@
 /**
- * $GAFFER token — live on mainnet.
- * Shared by the navbar, hero token bar, and footer.
+ * $GAFFER token — Solana SPL mint. Shared by the footer token bar.
  */
 export const GAFFER_TOKEN = {
   symbol: "$GAFFER",
-  /** Contract address (CA) of the $GAFFER token. */
-  address: "0x8259F905B85CCF6d946e60B3d19cc587EF8B2bA3",
+  /** Mint address (CA) of the $GAFFER token on Solana. */
+  address: "6ssLUfyabeUijTH3W39dFoiSEwE8zKc1xryCd6nKVory",
 } as const;
 
-/** Short form for compact UI: 0x8259…2bA3 */
+/** Short form for compact UI: 6ssLUf…Vory */
 export const shortCA = (addr: string = GAFFER_TOKEN.address) =>
   `${addr.slice(0, 6)}…${addr.slice(-4)}`;
