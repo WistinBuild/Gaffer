@@ -88,17 +88,6 @@ export default function Portal() {
             </span>
           </div>
 
-          {/* $GAFFER token — live on mainnet */}
-          <div className="reveal mt-6" style={{ ["--stagger-delay" as any]: "60ms" }}>
-            <div className="mb-2 inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.25em] text-gaffer-electric/90 uppercase">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gaffer-electric animate-live-dot" />
-              $GAFFER is live on Base mainnet
-            </div>
-            <div>
-              <BuyGaffer />
-            </div>
-          </div>
-
           {/* Diagonal headline */}
           <div className="relative mt-14 sm:mt-20">
             <h1 className="font-display text-white text-[18vw] sm:text-[14vw] lg:text-[11rem] leading-[0.82] tracking-wide">

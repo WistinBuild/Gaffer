@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ConnectButton } from "@/components/ui/ConnectButton";
-import { BuyGaffer } from "@/components/ui/BuyGaffer";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { XLink } from "@/components/ui/XLink";
 import { playClick, playHover, unlockAudio } from "@/lib/sounds";
@@ -98,11 +97,6 @@ export function Navbar() {
           {/* X / social */}
           <div className="hidden lg:flex items-center justify-center h-9 w-9 rounded-full hover:bg-white/5 transition-colors duration-150">
             <XLink size={16} />
-          </div>
-
-          {/* $GAFFER contract address */}
-          <div className="hidden lg:block">
-            <BuyGaffer variant="compact" />
           </div>
 
           {/* CTA */}
@@ -203,7 +197,6 @@ export function Navbar() {
             }}
           >
             <ConnectButton />
-            <BuyGaffer variant="compact" />
             <div className="flex items-center gap-5 font-mono text-[10px] tracking-[0.22em] uppercase text-white/40">
               <div className="flex items-center gap-3">
                 <SoundToggle />
