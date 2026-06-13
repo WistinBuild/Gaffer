@@ -1,79 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { type Address } from "viem";
+import { PublicKey } from "@solana/web3.js";
+import { getServerConnection } from "@/lib/solanaServerRead";
+import { getBotKeypair, sendBotIxs } from "@/lib/solanaServer";
 import {
-  getPublic,
-  getBotWallet,
-  writeWithRetry,
-  CONTRACT_ADDRESSES,
-  SQUAD_WARS_ABI,
-  GAFFER_NFT_ABI,
-  ORACLE_ABI,
-} from "@/lib/serverChain";
+  getWar,
+  getSquadCards,
+  getOracleState,
+  isMatchdayFinalized,
+  scorePoints,
+  ixPostPlayerResult,
+  ixFinalizeMatchday,
+  ixResolveWar,
+  type ChainCard,
+} from "@/lib/gafferPrograms";
 import { checkBotAuth } from "@/lib/botAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface Card {
-  playerId: string;
-  position: number;
-  rarity: number;
-  tournamentPts: number;
+interface EngStat {
   goals: number;
   assists: number;
   cleanSheets: number;
-}
-
-interface War {
-  id: bigint;
-  challenger: Address;
-  opponent: Address;
-  stake: bigint;
-  matchday: bigint;
-  captainSlot: number;
-  benchedSlot: number;
-  opponentCaptainSlot: number;
-  opponentBenchedSlot: number;
-  challengerScore: bigint;
-  opponentScore: bigint;
-  status: number;
-  winner: Address;
-  decisionLocked: boolean;
-}
-
-async function readSquadPlayerIds(
-  pub: ReturnType<typeof getPublic>,
-  owner: Address,
-): Promise<string[]> {
-  const tokenIds = (await pub.readContract({
-    address: CONTRACT_ADDRESSES.gafferNFT,
-    abi: GAFFER_NFT_ABI,
-    functionName: "getSquad",
-    args: [owner],
-  })) as readonly bigint[];
-
-  const cards = await Promise.all(
-    tokenIds.map(async (tid) => {
-      const c = (await pub.readContract({
-        address: CONTRACT_ADDRESSES.gafferNFT,
-        abi: GAFFER_NFT_ABI,
-        functionName: "getCard",
-        args: [tid],
-      })) as unknown as Card;
-      return c.playerId;
-    }),
-  );
-  return cards;
+  yellowCards: number;
+  redCards: number;
+  played: boolean;
 }
 
 /**
  * POST /api/bot/finalize
- * Body: { warId: number }
+ * Body: { warId: number|string }
  *
- * Bot (oracle owner) engineers matchday stats so the user's captain outscores
- * the bot's captain (~10% margin), then resolves the war so the user wins
- * the pot on-chain. If matchday is already finalized, skips straight to
- * resolveWar.
+ * Bot (oracle owner + wars resolver) engineers matchday stats so the user's
+ * captain outscores the bot's, posts them to the Oracle, finalizes the matchday,
+ * then resolves the war with the computed scores so the user wins the pot.
+ *
+ * Unlike the EVM contract (which scored on-chain), the Solana SquadWars program
+ * takes resolver-submitted scores — so we replicate Oracle.calculate_points here.
  */
 export async function POST(req: NextRequest) {
   const denied = checkBotAuth(req);
@@ -82,16 +45,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const warId = BigInt(body.warId);
 
-    const pub = getPublic();
-    const wallet = getBotWallet();
+    const conn = getServerConnection();
+    const botPk = getBotKeypair().publicKey;
 
-    const war = (await pub.readContract({
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "getWar",
-      args: [warId],
-    })) as unknown as War;
-
+    const war = await getWar(conn, warId);
+    if (!war) return NextResponse.json({ ok: false, error: `War ${warId} not found` }, { status: 404 });
     if (war.status !== 1) {
       return NextResponse.json(
         { ok: false, error: `War ${warId} is not active (status=${war.status})` },
@@ -100,92 +58,89 @@ export async function POST(req: NextRequest) {
     }
 
     const matchday = war.matchday;
-    const result: Record<string, string | bigint> = {
+    const challenger = new PublicKey(war.challenger);
+    const opponent = new PublicKey(war.opponent);
+    const challengerCards = (await getSquadCards(conn, challenger)) ?? [];
+    const opponentCards = (await getSquadCards(conn, opponent)) ?? [];
+
+    const result: Record<string, string> = {
       matchday: matchday.toString(),
-      challengerCaptainSlot: war.captainSlot.toString(),
-      opponentCaptainSlot: war.opponentCaptainSlot.toString(),
+      challengerCaptainSlot: String(war.captainSlot),
+      opponentCaptainSlot: String(war.opponentCaptainSlot),
     };
 
-    // ─── Check if matchday already finalized ─────────────────────────────
-    const alreadyFinal = (await pub.readContract({
-      address: CONTRACT_ADDRESSES.oracle,
-      abi: ORACLE_ABI,
-      functionName: "matchdayFinalized",
-      args: [matchday],
-    })) as boolean;
+    // ─── Engineer stats: user captain dominates, bot captain blanks ──────
+    const userCaptainId = challengerCards[war.captainSlot]?.playerId;
+    const botCaptainId = opponentCards[war.opponentCaptainSlot]?.playerId;
+    const userIds = new Set(challengerCards.map((c) => c.playerId));
 
-    if (!alreadyFinal) {
-      // Read both squads' player IDs
-      const userPlayers = await readSquadPlayerIds(pub, war.challenger);
-      const botPlayers  = await readSquadPlayerIds(pub, war.opponent);
-
-      const userCaptainId = userPlayers[war.captainSlot];
-      const botCaptainId  = botPlayers[war.opponentCaptainSlot];
-
-      // Engineered stats: user captain dominates, bot captain underperforms,
-      // others get baseline contributions. Score formula in Oracle.calculatePoints
-      // is position-weighted; giving the user captain a goal+assist+cleanSheet
-      // produces enough margin even after the bot's ~90% scoring.
-      const ids = new Set<string>();
-      [...userPlayers, ...botPlayers].forEach((p) => ids.add(p));
-      const playerIds = Array.from(ids);
-
-      const goals: number[]       = [];
-      const assists: number[]     = [];
-      const cleanSheets: number[] = [];
-      const yellows: number[]     = [];
-      const reds: number[]        = [];
-      const played: boolean[]     = [];
-
-      for (const pid of playerIds) {
-        if (pid === userCaptainId) {
-          goals.push(2); assists.push(1); cleanSheets.push(1);
-        } else if (pid === botCaptainId) {
-          goals.push(0); assists.push(0); cleanSheets.push(0);
-        } else if (userPlayers.includes(pid)) {
-          goals.push(0); assists.push(1); cleanSheets.push(1);
-        } else {
-          goals.push(0); assists.push(0); cleanSheets.push(0);
-        }
-        yellows.push(0); reds.push(0); played.push(true);
-      }
-
-      result.postTxHash = await writeWithRetry(pub, wallet, {
-        address: CONTRACT_ADDRESSES.oracle,
-        abi: ORACLE_ABI,
-        functionName: "postMatchdayResults",
-        args: [matchday, playerIds, goals, assists, cleanSheets, yellows, reds, played],
-      }, "postMatchdayResults");
+    const stats = new Map<string, EngStat>();
+    const allIds = new Set<string>([
+      ...challengerCards.map((c) => c.playerId),
+      ...opponentCards.map((c) => c.playerId),
+    ]);
+    for (const pid of allIds) {
+      let s: EngStat;
+      if (pid === userCaptainId) s = mk(2, 1, 1);
+      else if (pid === botCaptainId) s = mk(0, 0, 0);
+      else if (userIds.has(pid)) s = mk(0, 1, 1);
+      else s = mk(0, 0, 0);
+      stats.set(pid, s);
     }
 
-    // ─── Resolve war → winner gets pot ───────────────────────────────────
-    // Retries until the matchday-finalized state from the post above is visible.
-    const resolveHash = await writeWithRetry(pub, wallet, {
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "resolveWar",
-      args: [warId],
-    }, "resolveWar");
-    result.resolveTxHash = resolveHash;
+    // ─── Post results + finalize the matchday (once) ─────────────────────
+    const finalState = await isMatchdayFinalized(conn, matchday);
+    if (!finalState.finalized) {
+      for (const [pid, s] of stats) {
+        await sendBotIxs([ixPostPlayerResult(botPk, matchday, pid, s)], `post:${pid}`);
+      }
+      result.finalizeTxHash = await sendBotIxs(
+        [ixFinalizeMatchday(botPk, matchday)],
+        "finalizeMatchday",
+      );
+    }
 
-    // Re-read final state
-    const finalWar = (await pub.readContract({
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "getWar",
-      args: [warId],
-    })) as unknown as War;
+    // ─── Compute scores using the snapshotted stage multiplier ───────────
+    const oracle = await getOracleState(conn);
+    const snap = await isMatchdayFinalized(conn, matchday);
+    const mult = oracle?.stageMultiplier[snap.stage] ?? 100;
 
+    const score = (cards: ChainCard[], captainSlot: number, benchedSlot: number) => {
+      let total = 0;
+      cards.forEach((c, i) => {
+        if (i === benchedSlot) return;
+        const s = stats.get(c.playerId);
+        if (!s) return;
+        let pts = scorePoints(s, c.position, mult);
+        if (i === captainSlot) pts *= 2;
+        total += pts;
+      });
+      return total;
+    };
+    const challengerScore = score(challengerCards, war.captainSlot, war.benchedSlot);
+    const opponentScore = score(opponentCards, war.opponentCaptainSlot, war.opponentBenchedSlot);
+
+    // ─── Resolve → winner gets the pot ───────────────────────────────────
+    result.resolveTxHash = await sendBotIxs(
+      [ixResolveWar(botPk, warId, challenger, opponent, botPk, challengerScore, opponentScore)],
+      "resolveWar",
+    );
+
+    const finalWar = await getWar(conn, warId);
     return NextResponse.json({
       ok: true,
       ...result,
-      winner: finalWar.winner,
-      challengerScore: finalWar.challengerScore.toString(),
-      opponentScore:   finalWar.opponentScore.toString(),
+      winner: finalWar?.winner,
+      challengerScore: String(challengerScore),
+      opponentScore: String(opponentScore),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[bot/finalize] failed:", msg);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
+}
+
+function mk(goals: number, assists: number, cleanSheets: number): EngStat {
+  return { goals, assists, cleanSheets, yellowCards: 0, redCards: 0, played: true };
 }

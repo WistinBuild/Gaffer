@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { type Address } from "viem";
+import { getServerConnection } from "@/lib/solanaServerRead";
 import {
-  getPublic,
-  getBotWallet,
-  getBotAccount,
-  writeWithRetry,
-  CONTRACT_ADDRESSES,
-  SQUAD_WARS_ABI,
-  GAFFER_NFT_ABI,
-  USDC_ADDRESS,
-  USDC_ABI,
+  getBotKeypair,
+  sendBotIxs,
   BOT_SQUAD_PLAYER_IDS,
   BOT_SQUAD_POSITIONS,
-} from "@/lib/serverChain";
+} from "@/lib/solanaServer";
+import { hasMintedSquad, ataPda, ixMintSquad, ixAcceptWar, ixLockDecision } from "@/lib/gafferPrograms";
 import { checkBotAuth } from "@/lib/botAuth";
 
 export const runtime = "nodejs";
@@ -20,11 +14,12 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/bot/challenge
- * Body: { warId: number, stake: string }  (stake in USDC base units, 6 decimals)
+ * Body: { warId: number|string }
  *
  * The bot (treasury wallet):
  *   1. Mints a default squad if it hasn't yet
- *   2. Accepts the war (escrows matching stake)
+ *   2. Accepts the war (escrows matching USDC stake from its ATA — no approve
+ *      step on Solana; the SPL transfer is authorized by the bot's signature)
  *   3. Locks its decision (captain slot 4, bench slot 3)
  */
 export async function POST(req: NextRequest) {
@@ -33,65 +28,27 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const warId = BigInt(body.warId);
-    const stake = BigInt(body.stake);
 
-    const pub = getPublic();
-    const wallet = getBotWallet();
-    const bot = getBotAccount();
-    const botAddr = bot.address as Address;
+    const conn = getServerConnection();
+    const botPk = getBotKeypair().publicKey;
+    const result: Record<string, string> = { botAddress: botPk.toBase58() };
 
-    const result: Record<string, string> = { botAddress: botAddr };
-
-    // 1. Ensure bot has minted a squad
-    const hasMinted = (await pub.readContract({
-      address: CONTRACT_ADDRESSES.gafferNFT,
-      abi: GAFFER_NFT_ABI,
-      functionName: "hasMinted",
-      args: [botAddr],
-    })) as boolean;
-
-    if (!hasMinted) {
-      result.mintTxHash = await writeWithRetry(pub, wallet, {
-        address: CONTRACT_ADDRESSES.gafferNFT,
-        abi: GAFFER_NFT_ABI,
-        functionName: "mintSquad",
-        args: [BOT_SQUAD_PLAYER_IDS, BOT_SQUAD_POSITIONS],
-      }, "mintSquad");
+    // 1. Ensure the bot has a squad.
+    if (!(await hasMintedSquad(conn, botPk))) {
+      result.mintTxHash = await sendBotIxs(
+        [ixMintSquad(botPk, BOT_SQUAD_PLAYER_IDS, BOT_SQUAD_POSITIONS)],
+        "mintSquad",
+      );
     }
 
-    // 2. Approve the protocol to pull the bot's USDC stake (if needed)
-    const allowance = (await pub.readContract({
-      address: USDC_ADDRESS,
-      abi: USDC_ABI,
-      functionName: "allowance",
-      args: [botAddr, CONTRACT_ADDRESSES.squadWars],
-    })) as bigint;
-    if (allowance < stake) {
-      result.approveTxHash = await writeWithRetry(pub, wallet, {
-        address: USDC_ADDRESS,
-        abi: USDC_ABI,
-        functionName: "approve",
-        args: [CONTRACT_ADDRESSES.squadWars, stake],
-      }, "approve");
-    }
+    // 2. Accept the war (escrows matching USDC stake).
+    result.acceptTxHash = await sendBotIxs(
+      [ixAcceptWar(botPk, warId, ataPda(botPk))],
+      "acceptWar",
+    );
 
-    // 3. Accept war (escrows matching USDC stake) — retries if the approve
-    //    above hasn't propagated to the simulating node yet.
-    result.acceptTxHash = await writeWithRetry(pub, wallet, {
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "acceptWar",
-      args: [warId],
-    }, "acceptWar");
-
-    // 4. Lock bot decision — slot 4 captain, slot 3 bench — retries until the
-    //    accepted war is visible as Active.
-    result.lockTxHash = await writeWithRetry(pub, wallet, {
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "lockDecision",
-      args: [warId, 4, 3],
-    }, "lockDecision");
+    // 3. Lock bot decision — captain slot 4, bench slot 3.
+    result.lockTxHash = await sendBotIxs([ixLockDecision(botPk, warId, 4, 3)], "lockDecision");
 
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

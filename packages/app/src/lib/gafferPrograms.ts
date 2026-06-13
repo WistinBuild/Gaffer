@@ -522,6 +522,137 @@ export function ixLockDecision(
   });
 }
 
+// ─── oracle / server-side (bot) builders + scoring ───────────────────────────
+export interface OracleStateData {
+  owner: string;
+  currentStage: number;
+  currentMatchday: bigint;
+  stageMultiplier: number[]; // [u16;5], scaled by 100
+}
+
+export function decodeOracleState(data: Buffer): OracleStateData {
+  const r = new Reader(data, 8);
+  const owner = r.pubkey().toBase58();
+  const currentStage = r.u8();
+  const currentMatchday = r.u64();
+  const stageMultiplier = Array.from({ length: 5 }, () => r.u16());
+  return { owner, currentStage, currentMatchday, stageMultiplier };
+}
+
+export async function getOracleState(conn: Connection): Promise<OracleStateData | null> {
+  const info = await conn.getAccountInfo(oracleStatePda());
+  return info ? decodeOracleState(info.data) : null;
+}
+
+/** Is a matchday finalized? Reads the Matchday PDA (finalized flag at offset 8+8). */
+export async function isMatchdayFinalized(conn: Connection, matchday: bigint | number) {
+  const info = await conn.getAccountInfo(matchdayPda(matchday));
+  if (!info) return { finalized: false, stage: 0 };
+  const r = new Reader(info.data, 8);
+  r.u64(); // matchday
+  const finalized = r.bool();
+  const stage = r.u8();
+  return { finalized, stage };
+}
+
+/** Port of Oracle.calculate_points — multiplier is scaled by 100. */
+export function scorePoints(
+  stat: { goals: number; assists: number; cleanSheets: number; redCards: number; played: boolean },
+  position: number,
+  multiplier: number,
+): number {
+  if (!stat.played) return 0;
+  const g = stat.goals,
+    a = stat.assists,
+    cs = stat.cleanSheets;
+  let pts: number;
+  switch (position) {
+    case 0: pts = cs * 12 + g * 10 + a * 6; break;
+    case 1: pts = cs * 8 + g * 8 + a * 6; break;
+    case 2: pts = g * 8 + a * 6 + cs * 4; break;
+    case 3: pts = g * 10 + a * 4; break;
+    default: pts = g * 8 + a * 5; break;
+  }
+  if (stat.redCards > 0) pts = pts > 4 ? pts - 4 : 0;
+  return Math.floor((pts * multiplier) / 100);
+}
+
+export function ixPostPlayerResult(
+  owner: PublicKey,
+  matchday: bigint | number,
+  playerId: string,
+  s: { goals: number; assists: number; cleanSheets: number; yellowCards: number; redCards: number; played: boolean },
+) {
+  const data = new Writer()
+    .raw(disc("post_player_result"))
+    .u64(matchday)
+    .string(playerId)
+    .u8(s.goals)
+    .u8(s.assists)
+    .u8(s.cleanSheets)
+    .u8(s.yellowCards)
+    .u8(s.redCards)
+    .bool(s.played)
+    .build();
+  return new TransactionInstruction({
+    programId: ORACLE_PROGRAM_ID,
+    keys: [
+      key(oracleStatePda(), false, false),
+      key(matchdayPda(matchday), false, true),
+      key(playerStatPda(matchday, playerId), false, true),
+      key(owner, true, true),
+      key(SystemProgram.programId, false, false),
+    ],
+    data,
+  });
+}
+
+export function ixFinalizeMatchday(owner: PublicKey, matchday: bigint | number) {
+  const data = new Writer().raw(disc("finalize_matchday")).u64(matchday).build();
+  return new TransactionInstruction({
+    programId: ORACLE_PROGRAM_ID,
+    keys: [
+      key(oracleStatePda(), false, true),
+      key(matchdayPda(matchday), false, true),
+      key(owner, true, false),
+    ],
+    data,
+  });
+}
+
+export function ixResolveWar(
+  resolver: PublicKey,
+  warId: bigint | number,
+  challenger: PublicKey,
+  opponent: PublicKey,
+  feeOwner: PublicKey,
+  challengerScore: bigint | number,
+  opponentScore: bigint | number,
+) {
+  const data = new Writer()
+    .raw(disc("resolve_war"))
+    .u64(challengerScore)
+    .u64(opponentScore)
+    .build();
+  return new TransactionInstruction({
+    programId: SQUAD_WARS_PROGRAM_ID,
+    keys: [
+      key(warsConfigPda(), false, false),
+      key(warPda(warId), false, true),
+      key(warsVaultPda(), false, true),
+      key(ataPda(challenger), false, true),
+      key(ataPda(opponent), false, true),
+      key(ataPda(feeOwner), false, true),
+      key(managerStatsPda(challenger), false, true),
+      key(managerStatsPda(opponent), false, true),
+      key(resolver, true, true),
+      key(TOKEN_PROGRAM_ID, false, false),
+      key(SystemProgram.programId, false, false),
+    ],
+    data,
+  });
+}
+
 export function shortAddr(a?: string) {
   if (!a) return "—";
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
