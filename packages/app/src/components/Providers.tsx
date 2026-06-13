@@ -1,22 +1,23 @@
 "use client";
 
-import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppKit } from "@reown/appkit/react";
-import { wagmiAdapter, wagmiConfig, wcProjectId, networks, appUrl } from "@/lib/wagmi";
 import { solanaAdapter, solanaDefaultNetwork } from "@/lib/solana";
-import { ChainGuard } from "@/components/ChainGuard";
 import { useState } from "react";
 
-// Reown AppKit — the unified "Connect Wallet" modal (WalletConnect + injected
-// wallets in one branded popup). Created once at module scope. The app is
-// migrating its on-chain layer to Solana devnet, so the modal defaults to
-// Solana devnet; the EVM networks remain available while the contracts are
-// ported to Anchor. Wallet-only (no email/social login).
+// Inlined here (not imported from lib/wagmi) so the EVM wagmi adapter stays out
+// of the client bundle entirely.
+const wcProjectId =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "ab78ba5feac2c3132c4e017649e93f91";
+const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://gaffer.games";
+
+// Reown AppKit — the unified "Connect Wallet" modal. The on-chain layer is on
+// Solana devnet, so the modal is Solana-only (the EVM/wagmi adapter has been
+// removed now that all reads/writes go through the Anchor programs).
 createAppKit({
-  adapters: [solanaAdapter, wagmiAdapter],
+  adapters: [solanaAdapter],
   projectId: wcProjectId,
-  networks: [solanaDefaultNetwork, ...networks],
+  networks: [solanaDefaultNetwork],
   defaultNetwork: solanaDefaultNetwork,
   metadata: {
     name: "Gaffer",
@@ -34,12 +35,5 @@ createAppKit({
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
 
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <ChainGuard />
-        {children}
-      </QueryClientProvider>
-    </WagmiProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
