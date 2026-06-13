@@ -1,0 +1,9 @@
+# Anchor / SBF build artifacts
+target/
+.anchor/
+test-ledger/
+
+# Program upgrade-authority keypairs — define the on-chain program address AND
+# can sign upgrades. Keep them OUT of git; back them up out-of-band. The program
+# IDs they correspond to are recorded in README.md / Anchor.toml.
+*-program-keypair.json

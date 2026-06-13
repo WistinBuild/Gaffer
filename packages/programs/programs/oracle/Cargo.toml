@@ -1,0 +1,20 @@
+[package]
+name = "oracle"
+version = "0.1.0"
+description = "Gaffer World Cup oracle — matchday results, stage multipliers, fantasy scoring (Solana port of Oracle.sol)"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "oracle"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }

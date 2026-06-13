@@ -1,0 +1,17 @@
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+oracle = "3byJrFHoZ4v9tTo9XAKn1KrE82LZSAxwqMDijVXMf5Yb"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "../../.solana/devnet-keypair.json"
+
+[scripts]
