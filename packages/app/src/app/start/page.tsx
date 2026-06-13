@@ -8,8 +8,6 @@ import { LetterWave } from "@/components/ui/HoverText";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 
-const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-
 type Step = {
   n: string;
   title: string;
@@ -160,19 +158,6 @@ export default function StartPage() {
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* USDC token helper */}
-          <div className="mt-8 rounded-2xl p-[1.5px] bg-white/[0.04] hairline-strong">
-            <div className="rounded-[calc(1rem-1.5px)] bg-gaffer-surface/60 hairline inner-glow p-6">
-              <div className="font-mono text-[10px] tracking-[0.22em] text-white/40 uppercase mb-2">
-                Can&apos;t see your USDC? Add the token to your wallet
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <code className="font-mono text-[13px] text-gaffer-gold break-all">{USDC_ADDRESS}</code>
-                <span className="font-mono text-[10px] tracking-[0.18em] text-white/40 uppercase">· Base · 6 decimals</span>
-              </div>
-            </div>
           </div>
 
           {/* CTA footer */}
