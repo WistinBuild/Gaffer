@@ -10,8 +10,8 @@ package holds the Anchor (Rust) ports of the original contracts in
 | ----------------- | -------------- | ------ |
 | `Oracle.sol`      | `programs/oracle` | ✅ ported, **deployed + initialized on devnet** |
 | `GafferNFT.sol`   | `programs/gaffer-nft` | ✅ ported, **deployed + initialized on devnet** |
-| `PlayerMint.sol`  | `programs/player-mint` | ✅ ported + builds; deploy pending SOL |
-| `SquadWars.sol`   | `programs/squad-wars` | ✅ ported + builds; deploy pending SOL |
+| `PlayerMint.sol`  | `programs/player-mint` | ✅ ported, **deployed + initialized on devnet** |
+| `SquadWars.sol`   | `programs/squad-wars` | ✅ ported, **deployed + initialized on devnet** |
 
 The Oracle is the dependency root (SquadWars reads its scoring), so it is ported
 first and serves as the pattern for the rest.
@@ -41,9 +41,16 @@ first and serves as the pattern for the rest.
 | OracleState PDA (`["oracle"]`) | `3Uk8BCtKtk6TTkQKkJYG6531G7UhLXzLH3AjWXrvbTuZ` |
 | GafferNFT program ID | `Fhk54QhcVjY7phpxzF7HCPa6STsYD1FN8Jfwk2irdkGf` |
 | NftConfig PDA (`["config"]`) | `GuEy32ZotTzNLLhsHQCVLwry9HLwe7AnV65TyXtnxTrU` |
-| PlayerMint program ID | `D9xiskVonYcZs3zMnjeKS9HY27s2fcBxTD3Jw5op2XoY` (deploy pending) |
-| SquadWars program ID | `25MeET8DMNgM8VCJTXxDQVPAaJsp5HezyhypofbYdaqh` (deploy pending) |
+| PlayerMint program ID | `D9xiskVonYcZs3zMnjeKS9HY27s2fcBxTD3Jw5op2XoY` |
+| PlayerMint MintConfig / vault | `3WzWugwfCQNPkmfzyc1jt2NEpVahoosY5EBqLQ1ckfL1` / `FC2ykxzW1JMs8mHSvvHuqej9scrcH3duDx1DrUAtPW3M` |
+| SquadWars program ID | `25MeET8DMNgM8VCJTXxDQVPAaJsp5HezyhypofbYdaqh` |
+| SquadWars WarsConfig / vault | `AhimqNPXD4fkUEW8r5CUDrt1dvhMu4DRjPvnirPWZj2b` / `JDNbRNEhfVmCAybS7hCAuyq35rmhssGkXdN9dtq5UGZx` |
+| USDC mint (devnet) | `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (Circle) |
 | Cluster | devnet |
+
+All four programs deployed + initialized on devnet 2026-06-13. PlayerMint and
+SquadWars escrow USDC into their vault PDAs; SquadWars' config points at the
+Oracle + GafferNFT program IDs and uses the deployer as owner/resolver.
 
 Deployed + initialized 2026-06-13:
 - deploy tx `T2oefe5sv6mdC4EBf2CbBotsLtMmLk1CSnPRshwKQopS1aSoBD91Ccyx6iY6qh6k7wdoK4oGPFpNuVdpYF7eETp`
