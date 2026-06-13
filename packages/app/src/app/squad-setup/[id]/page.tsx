@@ -2,15 +2,13 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { zeroAddress } from "viem";
+import { useGaffer, useHasMinted, useSquadCards } from "@/lib/useGaffer";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import { CONTRACT_ADDRESSES, GAFFER_NFT_ABI } from "@/lib/contracts";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
 import { enrichPlayer, ATTR_LABELS } from "@/lib/player-attributes";
@@ -19,21 +17,10 @@ import { SKILL_CARDS } from "@/lib/skill-cards";
 import type { Instruction, Mentality, DugholePlayer } from "@/types/dughole";
 
 const players = playersData as Player[];
-const hasContracts = CONTRACT_ADDRESSES.squadWars !== zeroAddress;
 const RARITY_NAMES = ["BRONZE", "SILVER", "GOLD", "ICON"] as const;
 
 // Demo squad shown when the user has no on-chain squad yet (not connected, or hasn't minted).
 const FALLBACK_SQUAD_IDS = ["alisson", "van_dijk", "rodri", "bellingham", "mbappe"];
-
-interface ChainCard {
-  playerId: string;
-  position: number;
-  rarity: number;
-  tournamentPts: number;
-  goals: number;
-  assists: number;
-  cleanSheets: number;
-}
 
 const ROLES_BY_POS: Record<string, { id: string; name: string; desc: string }[]> = {
   GK:  [
@@ -80,55 +67,27 @@ export default function SquadSetupPage() {
   const params = useParams();
   const router = useRouter();
   const warId = params?.id as string;
-  const { address } = useAccount();
+  const { address, pubkey } = useGaffer();
 
   // ─── Read on-chain squad (falls back to demo five if not connected / not minted) ───
-  const { data: hasMinted } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT, abi: GAFFER_NFT_ABI, functionName: "hasMinted",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts },
-  });
-  const { data: squadTokens } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT, abi: GAFFER_NFT_ABI, functionName: "getSquad",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts && !!hasMinted },
-  });
-
-  const cardContracts = useMemo(() => {
-    if (!squadTokens) return [];
-    return (squadTokens as readonly bigint[]).map((tokenId) => ({
-      address: CONTRACT_ADDRESSES.gafferNFT,
-      abi: GAFFER_NFT_ABI,
-      functionName: "getCard" as const,
-      args: [tokenId] as const,
-    }));
-  }, [squadTokens]);
-
-  const { data: cardResults } = useReadContracts({
-    contracts: cardContracts,
-    query: { enabled: cardContracts.length > 0 },
-  });
+  const { data: hasMinted } = useHasMinted(pubkey);
+  const { data: squadCards } = useSquadCards(pubkey); // ChainCard[] | null (null = not minted)
 
   const chainSquadIds: string[] = useMemo(() => {
-    if (!cardResults || cardResults.length === 0) return [];
-    const ids = cardResults
-      .map((r) => (r.status === "success" ? ((r.result as unknown as ChainCard).playerId ?? "") : ""))
+    if (!squadCards || squadCards.length === 0) return [];
+    const ids = squadCards
+      .map((c) => c.playerId ?? "")
       .filter((id) => id && players.some((p) => p.id === id));
     return ids.length === 5 ? ids : [];
-  }, [cardResults]);
+  }, [squadCards]);
 
   const cardRarityById = useMemo(() => {
     const map: Record<string, (typeof RARITY_NAMES)[number]> = {};
-    if (cardResults) {
-      cardResults.forEach((r) => {
-        if (r.status === "success") {
-          const c = r.result as unknown as ChainCard;
-          if (c?.playerId) map[c.playerId] = RARITY_NAMES[c.rarity] ?? "BRONZE";
-        }
-      });
-    }
+    squadCards?.forEach((c) => {
+      if (c?.playerId) map[c.playerId] = RARITY_NAMES[c.rarity] ?? "BRONZE";
+    });
     return map;
-  }, [cardResults]);
+  }, [squadCards]);
 
   const isUsingChainSquad = chainSquadIds.length === 5;
   // FALLBACK_SQUAD_IDS is internal scaffolding only — it keeps the hooks below from
@@ -202,11 +161,9 @@ export default function SquadSetupPage() {
 
   // Gate: never render the scaffolding squad — show a real state until the
   // manager's on-chain squad is loaded.
-  if (hasContracts) {
-    if (!address) return <SetupGate title="Connect your wallet" sub="Connect to load your squad and set up this war." />;
-    if (hasMinted === false) return <SetupGate title="No squad yet" sub="Mint your five-player squad before setting up a war." href="/squad" cta="Mint a squad" />;
-    if (!isUsingChainSquad) return <SetupGate title="Loading your squad…" sub="Reading your cards from the chain." />;
-  }
+  if (!address) return <SetupGate title="Connect your wallet" sub="Connect to load your squad and set up this war." />;
+  if (hasMinted === false || squadCards === null) return <SetupGate title="No squad yet" sub="Mint your five-player squad before setting up a war." href="/squad" cta="Mint a squad" />;
+  if (!isUsingChainSquad) return <SetupGate title="Loading your squad…" sub="Reading your cards from the chain." />;
 
   return (
     <>

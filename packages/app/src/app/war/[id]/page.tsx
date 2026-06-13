@@ -3,9 +3,10 @@
 import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { zeroAddress, type Address } from "viem";
-import { fromUSDC } from "@/lib/usdc";
+import { useQuery } from "@tanstack/react-query";
+import { PublicKey } from "@solana/web3.js";
+import { useGaffer, useWar } from "@/lib/useGaffer";
+import { fromUSDC } from "@/lib/usdcSolana";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { ConnectButton } from "@/components/ui/ConnectButton";
@@ -13,42 +14,19 @@ import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import { CONTRACT_ADDRESSES, SQUAD_WARS_ABI, GAFFER_NFT_ABI } from "@/lib/contracts";
+import { getSquadCards, type ChainCard } from "@/lib/gafferPrograms";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
 
 const players = playersData as Player[];
 const pick = (id: string) => players.find((p) => p.id === id) ?? players[0];
 
+// The Solana "empty"/default pubkey — used as the opponent before a war is accepted
+// and as the war winner when a war is a draw.
+const ZERO_PUBKEY = "11111111111111111111111111111111";
+
 type Rarity = "BRONZE" | "SILVER" | "GOLD" | "ICON";
 const RARITY_NAMES: Rarity[] = ["BRONZE", "SILVER", "GOLD", "ICON"];
-
-interface ChainWar {
-  id: bigint;
-  challenger: Address;
-  opponent: Address;
-  stake: bigint;
-  matchday: bigint;
-  captainSlot: number;
-  benchedSlot: number;
-  opponentCaptainSlot: number;
-  opponentBenchedSlot: number;
-  challengerScore: bigint;
-  opponentScore: bigint;
-  status: number;
-  winner: Address;
-  decisionLocked: boolean;
-}
-
-interface ChainCard {
-  playerId: string;
-  position: number;
-  rarity: number;
-  tournamentPts: number;
-  goals: number;
-  assists: number;
-  cleanSheets: number;
-}
 
 type SquadEntry = {
   id: string;
@@ -70,66 +48,30 @@ export default function WarDetailPage() {
   const params = useParams();
   const warIdStr = (params?.id as string) ?? "0";
   const warIdBig = BigInt(warIdStr);
-  const { address } = useAccount();
-  const me = address?.toLowerCase();
+  const { address, conn } = useGaffer();
+  const me = address;
 
   // Read this war from chain
-  const { data: warData, isLoading: warLoading } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars,
-    abi: SQUAD_WARS_ABI,
-    functionName: "getWar",
-    args: [warIdBig],
-    query: { enabled: warIdBig > BigInt(0) },
-  });
-  const w = warData as unknown as ChainWar | undefined;
+  const { data: warData, isLoading: warLoading } = useWar(warIdBig > BigInt(0) ? warIdBig : undefined);
+  const w = warData ?? undefined;
 
-  // Read both squads' token IDs
-  const { data: chalSquadIds } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT,
-    abi: GAFFER_NFT_ABI,
-    functionName: "getSquad",
-    args: w && w.challenger !== zeroAddress ? [w.challenger] : undefined,
-    query: { enabled: !!w && w.challenger !== zeroAddress },
-  });
-  const { data: oppSquadIds } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT,
-    abi: GAFFER_NFT_ABI,
-    functionName: "getSquad",
-    args: w && w.opponent !== zeroAddress ? [w.opponent] : undefined,
-    query: { enabled: !!w && w.opponent !== zeroAddress },
-  });
-
-  // Batch-fetch all 10 cards (5 + 5) via multicall
-  const allTokenIds = useMemo(() => {
-    const ids: bigint[] = [];
-    if (chalSquadIds) ids.push(...(chalSquadIds as readonly bigint[]));
-    if (oppSquadIds) ids.push(...(oppSquadIds as readonly bigint[]));
-    return ids;
-  }, [chalSquadIds, oppSquadIds]);
-  const cardContracts = useMemo(
-    () =>
-      allTokenIds.map((tokenId) => ({
-        address: CONTRACT_ADDRESSES.gafferNFT,
-        abi: GAFFER_NFT_ABI,
-        functionName: "getCard" as const,
-        args: [tokenId] as const,
-      })),
-    [allTokenIds],
-  );
-  const { data: cardResults } = useReadContracts({
-    contracts: cardContracts,
-    query: { enabled: cardContracts.length > 0 },
+  // Read both squads' cards. Hooks can't be looped, so fetch both sides in one query.
+  const { data: squads } = useQuery({
+    queryKey: ["warSquads", warIdStr, w?.challenger, w?.opponent],
+    enabled: !!w && w.challenger !== ZERO_PUBKEY,
+    queryFn: async () => ({
+      challenger: await getSquadCards(conn, new PublicKey(w!.challenger)),
+      opponent:
+        w!.opponent !== ZERO_PUBKEY ? await getSquadCards(conn, new PublicKey(w!.opponent)) : null,
+    }),
   });
 
   // Build challenger + opponent squad entries with captain/bench flags + perf
   const { challengerSquad, opponentSquad } = useMemo(() => {
-    if (!w || !cardResults) return { challengerSquad: [] as SquadEntry[], opponentSquad: [] as SquadEntry[] };
-    const cards = cardResults.map((r) =>
-      r.status === "success" ? (r.result as unknown as ChainCard) : null,
-    );
-    const buildSide = (offset: number, capSlot: number, benchSlot: number): SquadEntry[] =>
+    if (!w || !squads) return { challengerSquad: [] as SquadEntry[], opponentSquad: [] as SquadEntry[] };
+    const buildSide = (cards: (ChainCard | null)[] | null, capSlot: number, benchSlot: number): SquadEntry[] =>
       Array.from({ length: 5 }, (_, idx) => {
-        const c = cards[offset + idx];
+        const c = cards?.[idx] ?? null;
         if (!c) return { id: "alisson", rarity: "BRONZE", pts: 0, isCaptain: false, isBench: idx === benchSlot, perf: "—" } as SquadEntry;
         const isCaptain = idx === capSlot;
         const isBench = idx === benchSlot;
@@ -144,13 +86,13 @@ export default function WarDetailPage() {
         };
       });
     return {
-      challengerSquad: buildSide(0, w.captainSlot, w.benchedSlot),
-      opponentSquad:   buildSide(5, w.opponentCaptainSlot, w.opponentBenchedSlot),
+      challengerSquad: buildSide(squads.challenger, w.captainSlot, w.benchedSlot),
+      opponentSquad:   buildSide(squads.opponent, w.opponentCaptainSlot, w.opponentBenchedSlot),
     };
-  }, [w, cardResults]);
+  }, [w, squads]);
 
   // Derived values
-  const exists = !!w && w.challenger !== zeroAddress;
+  const exists = !!w && w.challenger !== ZERO_PUBKEY;
   const matchday = w ? Number(w.matchday) : 0;
   const { stage, mult } = STAGE_BY_MD(matchday);
   const statusLabel = ["OPEN", "ACTIVE", "RESOLVED", "CANCELLED"][w?.status ?? 0];
@@ -159,9 +101,9 @@ export default function WarDetailPage() {
   const payoutUSDC = potUSDC - feeUSDC;
   const chalScore = w ? Number(w.challengerScore) : 0;
   const oppScore = w ? Number(w.opponentScore) : 0;
-  const youWon = w ? w.winner.toLowerCase() === me : false;
-  const youAreChallenger = w ? w.challenger.toLowerCase() === me : false;
-  const youArePart = youAreChallenger || (w?.opponent.toLowerCase() === me);
+  const youWon = w ? w.winner === me : false;
+  const youAreChallenger = w ? w.challenger === me : false;
+  const youArePart = youAreChallenger || (w?.opponent === me);
 
   // ───────────────────────── Render guards ─────────────────────────
   if (warLoading) {
@@ -244,7 +186,7 @@ export default function WarDetailPage() {
                 </span>
                 <span className="text-white/30">vs</span>
                 <span className="text-white/80">
-                  {w.opponent === zeroAddress
+                  {w.opponent === ZERO_PUBKEY
                     ? <span className="text-white/40">awaiting</span>
                     : <HoverWord glow="white">{`${w.opponent.slice(0,6)}…${w.opponent.slice(-4)}`}</HoverWord>}
                   {!youAreChallenger && youArePart && <span className="ml-1 text-gaffer-electric">· YOU</span>}
@@ -268,13 +210,13 @@ export default function WarDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
               <SquadBreakdown
                 handle={`${w.challenger.slice(0,6)}…${w.challenger.slice(-4)}`}
-                isWinner={w.status === 2 && w.winner.toLowerCase() === w.challenger.toLowerCase()}
+                isWinner={w.status === 2 && w.winner === w.challenger}
                 total={chalScore}
                 squad={challengerSquad}
               />
               <SquadBreakdown
                 handle={`${w.opponent.slice(0,6)}…${w.opponent.slice(-4)}`}
-                isWinner={w.status === 2 && w.winner.toLowerCase() === w.opponent.toLowerCase()}
+                isWinner={w.status === 2 && w.winner === w.opponent}
                 total={oppScore}
                 squad={opponentSquad}
               />
@@ -288,10 +230,10 @@ export default function WarDetailPage() {
                 youWon ? "bg-gaffer-electric/10" : "bg-gaffer-red/10"
               }`}>
                 <div className={`font-display text-3xl tracking-wider ${youWon ? "text-gaffer-electric" : "text-gaffer-red"}`}>
-                  {youWon ? "VICTORY" : w.winner === zeroAddress ? "DRAW" : "DEFEAT"}
+                  {youWon ? "VICTORY" : w.winner === ZERO_PUBKEY ? "DRAW" : "DEFEAT"}
                 </div>
                 <div className="font-display text-2xl text-white tabular-nums">
-                  {youWon ? "+" : w.winner === zeroAddress ? "" : "-"}{(youWon ? payoutUSDC - Number(fromUSDC(w.stake)) : Number(fromUSDC(w.stake))).toFixed(4)}
+                  {youWon ? "+" : w.winner === ZERO_PUBKEY ? "" : "-"}{(youWon ? payoutUSDC - Number(fromUSDC(w.stake)) : Number(fromUSDC(w.stake))).toFixed(4)}
                   <span className="font-mono text-[11px] tracking-[0.2em] text-white/50 ml-1">USDC</span>
                 </div>
               </div>

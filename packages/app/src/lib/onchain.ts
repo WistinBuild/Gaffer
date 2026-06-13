@@ -1,88 +1,39 @@
 "use client";
 
-import { useMemo } from "react";
-import { useReadContract, useReadContracts } from "wagmi";
-import { zeroAddress, type Address } from "viem";
-import { CONTRACT_ADDRESSES, SQUAD_WARS_ABI } from "@/lib/contracts";
+import { useQuery } from "@tanstack/react-query";
+import { useGaffer } from "@/lib/useGaffer";
+import * as G from "@/lib/gafferPrograms";
+export type { ChainWar } from "@/lib/gafferPrograms";
 
-// Are the contracts configured (env addresses set)?
-export const hasContracts = CONTRACT_ADDRESSES.squadWars !== zeroAddress;
+// The Solana programs are always configured (program IDs ship as defaults), so
+// the old "are the EVM addresses set?" gate is now always true.
+export const hasContracts = true;
 
-// How many war IDs to scan (wars are sequential from 1).
-const WAR_SCAN_LIMIT = 40;
-
-export interface ChainWar {
-  id: bigint;
-  challenger: Address;
-  opponent: Address;
-  stake: bigint;
-  matchday: bigint;
-  captainSlot: number;
-  benchedSlot: number;
-  opponentCaptainSlot: number;
-  opponentBenchedSlot: number;
-  challengerScore: bigint;
-  opponentScore: bigint;
-  status: number; // 0=Open 1=Active 2=Resolved 3=Cancelled
-  winner: Address;
-  decisionLocked: boolean;
-}
-
-/** Read every existing war via multicall. Returns [] until contracts are set. */
+/** Read every existing war from the SquadWars program. */
 export function useAllWars() {
-  const contracts = useMemo(
-    () =>
-      Array.from({ length: WAR_SCAN_LIMIT }, (_, i) => ({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "getWar" as const,
-        args: [BigInt(i + 1)] as const,
-      })),
-    [],
-  );
-
-  const { data, refetch, isLoading } = useReadContracts({
-    contracts,
-    query: { enabled: hasContracts },
+  const { conn } = useGaffer();
+  const { data, refetch, isLoading } = useQuery({
+    queryKey: ["allWars"],
+    queryFn: () => G.getAllWars(conn),
+    refetchInterval: 15_000,
   });
-
-  const wars = useMemo<ChainWar[]>(() => {
-    if (!data) return [];
-    return data
-      .map((r) => (r.status === "success" ? (r.result as unknown as ChainWar) : null))
-      .filter((w): w is ChainWar => w !== null && w.challenger !== zeroAddress);
-  }, [data]);
-
-  return { wars, refetch, isLoading: hasContracts && isLoading };
+  return { wars: data ?? [], refetch, isLoading };
 }
 
 export interface LeaderRow {
-  manager: Address;
+  manager: string;
   wins: number;
 }
 
 /** Read the on-chain leaderboard (top `limit` by wins). */
 export function useLeaderboard(limit = 10) {
-  const { data, isLoading } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars,
-    abi: SQUAD_WARS_ABI,
-    functionName: "getLeaderboard",
-    args: [BigInt(limit)],
-    query: { enabled: hasContracts },
+  const { conn } = useGaffer();
+  const { data, isLoading } = useQuery({
+    queryKey: ["leaderboard", limit],
+    queryFn: () => G.getLeaderboard(conn, limit),
   });
-
-  const rows = useMemo<LeaderRow[]>(() => {
-    if (!data) return [];
-    const [managers, winCounts] = data as unknown as [Address[], bigint[]];
-    return managers
-      .map((m, i) => ({ manager: m, wins: Number(winCounts[i]) }))
-      .filter((r) => r.manager !== zeroAddress);
-  }, [data]);
-
-  return { rows, isLoading: hasContracts && isLoading };
+  const rows: LeaderRow[] = (data ?? []).map((r) => ({ manager: r.manager, wins: r.wins }));
+  return { rows, isLoading };
 }
 
-export function shortAddr(a?: string) {
-  if (!a) return "—";
-  return `${a.slice(0, 6)}…${a.slice(-4)}`;
-}
+export { shortAddr } from "@/lib/gafferPrograms";

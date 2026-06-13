@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAccount } from "wagmi";
+import { useGaffer } from "@/lib/useGaffer";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
 import { PlayerCard } from "@/components/ui/PlayerCard";
@@ -21,7 +21,7 @@ function rarityForRating(rating: number): Rarity {
 }
 
 export function WelcomePack() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useGaffer();
   const [open, setOpen] = useState(false);
   const [cards, setCards] = useState<{ player: Player; rarity: Rarity }[]>([]);
 

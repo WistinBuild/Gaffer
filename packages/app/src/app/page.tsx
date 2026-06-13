@@ -11,8 +11,8 @@ import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
 import { useAllWars, useLeaderboard, shortAddr, type ChainWar } from "@/lib/onchain";
-import { fromUSDC } from "@/lib/usdc";
-import { zeroAddress as ZERO } from "viem";
+import { fromUSDC } from "@/lib/usdcSolana";
+const ZERO = "11111111111111111111111111111111"; // Solana default pubkey = "no opponent"
 
 const players = playersData as Player[];
 const pick = (id: string) => players.find((p) => p.id === id)!;

@@ -2,9 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
-import { toUSDC, ensureUsdcAllowance } from "@/lib/usdc";
-import { useEnsureChain } from "@/lib/useEnsureChain";
+import { useGaffer, useGafferSend, useCatalogBatch } from "@/lib/useGaffer";
+import { ixMintPlayer, ataPda, nextTokenId } from "@/lib/gafferPrograms";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { ConnectButton } from "@/components/ui/ConnectButton";
@@ -13,7 +12,6 @@ import { PlayerCard } from "@/components/ui/PlayerCard";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 import { rarityFor, priceUSDC, priceLabel, maxSupply } from "@/lib/market";
-import { CONTRACT_ADDRESSES, PLAYER_MINT_ABI } from "@/lib/contracts";
 import { playClick, playCoin, playSuccess, unlockAudio } from "@/lib/sounds";
 import playersData from "@/data/players.json";
 import { Player, Position } from "@/types";
@@ -25,45 +23,69 @@ type PosFilter = "ALL" | "GK" | "DEF" | "MID" | "FWD";
 type SortKey = "price-desc" | "price-asc" | "rating" | "rarity";
 
 export default function MarketplacePage() {
-  const { address, isConnected } = useAccount();
+  const { pubkey, isConnected, conn } = useGaffer();
+  const send = useGafferSend();
   const [rarity, setRarity] = useState<RarityFilter>("ALL");
   const [pos, setPos] = useState<PosFilter>("ALL");
   const [sort, setSort] = useState<SortKey>("price-desc");
   const [search, setSearch] = useState("");
   const [showLegendsOnly, setShowLegendsOnly] = useState(false);
 
-  // Mint transaction state — shared across all MarketCards via this page-level hook
-  const { writeContract, data: txHash, isPending: txSending, error: txError, reset: resetTx } =
-    useWriteContract();
-  const { writeContractAsync: approveAsync } = useWriteContract();
-  const publicClient = usePublicClient();
-  const { wrongChain, ensureChain } = useEnsureChain();
-  const { isLoading: txConfirming, isSuccess: txDone } = useWaitForTransactionReceipt({ hash: txHash });
+  // Mint transaction state — shared across all MarketCards via page-level state.
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txSending, setTxSending] = useState(false);
+  const [txDone, setTxDone] = useState(false);
+  const [txError, setTxError] = useState<Error | null>(null);
+  // Solana confirms the tx inline inside `send`, so there is no separate
+  // "confirming" phase — keep the flag for UI parity with the EVM flow.
+  const txConfirming = false;
   const [mintingId, setMintingId] = useState<string | null>(null);
+
+  function resetTx() {
+    setTxHash(null);
+    setTxDone(false);
+    setTxError(null);
+  }
+
+  // All player ids for the on-chain catalog batch read (refetches every 20s).
+  const allPlayerIds = useMemo(() => ALL_PLAYERS.map((p) => p.id), []);
+  const { data: catalogData, isLoading: supplyLoading } = useCatalogBatch(allPlayerIds);
+
+  const supplyMap = useMemo(() => {
+    const m: Record<string, { minted: number; max: number; price: bigint }> = {};
+    if (!catalogData) return m;
+    ALL_PLAYERS.forEach((p) => {
+      const c = catalogData[p.id];
+      if (!c || !c.exists) return; // not seeded in catalog
+      m[p.id] = { minted: Number(c.minted), max: Number(c.maxSupply), price: BigInt(c.price) };
+    });
+    return m;
+  }, [catalogData]);
 
   async function mintPlayer(playerId: string) {
     unlockAudio().then(playClick).catch(() => {});
-    if (!address || !publicClient) return;
+    if (!pubkey) return;
     const onchain = supplyMap[playerId];
     // Don't even ask the wallet if it's already sold out on-chain.
     if (onchain && onchain.max > 0 && onchain.minted >= onchain.max) return;
     setMintingId(playerId);
-    const player = ALL_PLAYERS.find((p) => p.id === playerId)!;
-    // Charge the on-chain catalog price (source of truth) when we have it; the
-    // contract pulls exactly that amount, so approving the local estimate risks
-    // an "insufficient allowance" revert if the two ever diverge.
-    const amount = onchain?.price ?? toUSDC(priceUSDC(player).toFixed(6));
+    setTxSending(true);
+    setTxDone(false);
+    setTxError(null);
+    setTxHash(null);
+    // On Solana USDC is an SPL token — the program pulls from the buyer's ATA;
+    // there is no separate approve/allowance step.
     try {
-      await ensureChain();
-      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.playerMint, amount);
-      writeContract({
-        address: CONTRACT_ADDRESSES.playerMint,
-        abi: PLAYER_MINT_ABI,
-        functionName: "mintPlayer",
-        args: [playerId],
-      });
-    } catch {
+      const tokenId = await nextTokenId(conn);
+      const ix = ixMintPlayer(pubkey, tokenId, playerId, ataPda(pubkey));
+      const sig = await send([ix]);
+      setTxHash(sig);
+      setTxDone(true);
+    } catch (e) {
+      setTxError(e as Error);
       setMintingId(null);
+    } finally {
+      setTxSending(false);
     }
   }
 
@@ -74,31 +96,6 @@ export default function MarketplacePage() {
       setTimeout(() => playSuccess(), 400);
     }
   }, [txDone]);
-
-  // Real on-chain supply — one multicall reading catalogOf() for every player.
-  // `minted` is the true mint count (was previously a fake hash-based number).
-  const { data: catalogData, isLoading: supplyLoading } = useReadContracts({
-    contracts: ALL_PLAYERS.map((p) => ({
-      address: CONTRACT_ADDRESSES.playerMint,
-      abi: PLAYER_MINT_ABI,
-      functionName: "catalogOf" as const,
-      args: [p.id] as const,
-    })),
-    query: { refetchInterval: 20_000 }, // keep supply fresh as people mint
-  });
-
-  const supplyMap = useMemo(() => {
-    const m: Record<string, { minted: number; max: number; price: bigint }> = {};
-    if (!catalogData) return m;
-    ALL_PLAYERS.forEach((p, i) => {
-      const res = catalogData[i];
-      if (res?.status !== "success" || !res.result) return;
-      const c = res.result as { maxSupply: number | bigint; minted: number | bigint; price: bigint; exists: boolean };
-      if (!c.exists) return; // not seeded in catalog
-      m[p.id] = { minted: Number(c.minted), max: Number(c.maxSupply), price: BigInt(c.price) };
-    });
-    return m;
-  }, [catalogData]);
 
   const filtered = useMemo(() => {
     let xs = ALL_PLAYERS.map((p) => ({
@@ -302,12 +299,12 @@ export default function MarketplacePage() {
                 <div className="flex items-center gap-3">
                   <span className={`inline-block h-2 w-2 rounded-full ${txDone ? "bg-gaffer-electric animate-live-dot" : "bg-gaffer-gold animate-live-dot"}`} />
                   <span className="font-mono text-[11px] tracking-[0.22em] uppercase text-white/80">
-                    {txDone ? `Minted ${mintingId} on-chain` : txConfirming ? "Confirming on Base…" : "Sign the mint in your wallet"}
+                    {txDone ? `Minted ${mintingId} on-chain` : txConfirming ? "Confirming on Solana…" : "Sign the mint in your wallet"}
                   </span>
                 </div>
                 {txHash && (
                   <a
-                    href={`https://sepolia.basescan.org/tx/${txHash}`}
+                    href={`https://explorer.solana.com/tx/${txHash}?cluster=devnet`}
                     target="_blank"
                     rel="noreferrer"
                     className="font-mono text-[10px] tracking-[0.22em] uppercase text-gaffer-gold hover:text-white transition-colors"
@@ -353,7 +350,6 @@ export default function MarketplacePage() {
                       minted={minted}
                       max={max}
                       soldOut={soldOut}
-                      wrongChain={wrongChain}
                       supplyLoading={supplyLoading && !onchain}
                       onMint={() => mintPlayer(x.player.id)}
                       isMinting={mintingId === x.player.id && (txSending || txConfirming)}
@@ -375,7 +371,7 @@ export default function MarketplacePage() {
 // ─── PIECES ─────────────────────────────────────────────────────────────────
 
 function MarketCard({
-  player, rarity, price, minted, max, soldOut, wrongChain, supplyLoading, onMint, isMinting, canMint,
+  player, rarity, price, minted, max, soldOut, supplyLoading, onMint, isMinting, canMint,
 }: {
   player: Player;
   rarity: "BRONZE" | "SILVER" | "GOLD" | "ICON";
@@ -383,7 +379,6 @@ function MarketCard({
   minted: number;
   max: number;
   soldOut: boolean;
-  wrongChain: boolean;
   supplyLoading: boolean;
   onMint: () => void;
   isMinting: boolean;
@@ -465,12 +460,11 @@ function MarketCard({
             }`}
           title={
             soldOut ? "Sold out" :
-            wrongChain ? "Wallet is on the wrong network — minting will switch it" :
             (!canMint && !isMinting) ? "Connect wallet to mint" : undefined
           }
         >
           <span className="font-display text-base tracking-wider">
-            {soldOut ? "SOLD OUT" : isMinting ? "MINTING…" : wrongChain ? "SWITCH NETWORK" : `MINT · ${priceLabel(player)} USDC`}
+            {soldOut ? "SOLD OUT" : isMinting ? "MINTING…" : `MINT · ${priceLabel(player)} USDC`}
           </span>
         </button>
       </div>

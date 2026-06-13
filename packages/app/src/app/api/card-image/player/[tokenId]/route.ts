@@ -1,8 +1,7 @@
 /**
  * GET /api/card-image/player/:tokenId — SVG art for a marketplace player card.
  */
-import { getPublicClient } from "@/lib/readChain";
-import { CONTRACT_ADDRESSES, PLAYER_MINT_ABI } from "@/lib/contracts";
+import { readPlayerToken } from "@/lib/solanaServerRead";
 import { getPlayer, renderCardSVG, POSITION_NAME } from "@/lib/cardMetadata";
 
 export const runtime = "nodejs";
@@ -15,14 +14,8 @@ export async function GET(_req: Request, { params }: { params: { tokenId: string
   const { tokenId } = params;
   if (!/^\d+$/.test(tokenId)) return new Response("bad id", { status: 400 });
   try {
-    const info = (await getPublicClient().readContract({
-      address: CONTRACT_ADDRESSES.playerMint,
-      abi: PLAYER_MINT_ABI,
-      functionName: "tokenInfo",
-      args: [BigInt(tokenId)],
-    })) as unknown as {
-      playerId: string; position: number; rating: number; isLegend: boolean; mintedAt: number;
-    };
+    const info = await readPlayerToken(BigInt(tokenId));
+    if (!info) return new Response("token does not exist", { status: 404 });
     const p = getPlayer(info.playerId);
     const legend = Boolean(info.isLegend);
     const svg = renderCardSVG({

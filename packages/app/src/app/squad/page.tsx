@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { consumePitchEntry, playCrowd } from "@/lib/sounds";
-import { useAccount, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { zeroAddress } from "viem";
+import { useGaffer, useGafferSend, useHasMinted, usePlayerTokens } from "@/lib/useGaffer";
+import { ixMintSquad } from "@/lib/gafferPrograms";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { PlayerCard } from "@/components/ui/PlayerCard";
@@ -12,26 +12,20 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { VideoBackdrop } from "@/components/ui/VideoBackdrop";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { useCountUp } from "@/lib/useCountUp";
-import { useEnsureChain } from "@/lib/useEnsureChain";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 import playersData from "@/data/players.json";
 import { Player, Position } from "@/types";
-import {
-  CONTRACT_ADDRESSES,
-  GAFFER_NFT_ABI,
-  PLAYER_MINT_ABI,
-  POSITION_NUM,
-} from "@/lib/contracts";
 import { getStarterIds } from "@/lib/userRoster";
 
 const players = playersData as Player[];
 const POSITIONS: Position[] = ["GK", "DEF", "MID", "FWD", "FLEX"];
-const hasContracts = CONTRACT_ADDRESSES.squadWars !== zeroAddress;
+const POSITION_NUM: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3, FLEX: 4 };
 
 type Slot = { player: Player | null };
 
 export default function SquadBuilderPage() {
-  const { address, isConnected } = useAccount();
+  const { address, pubkey, isConnected } = useGaffer();
+  const send = useGafferSend();
   const [slots, setSlots] = useState<Slot[]>(Array(5).fill({ player: null }));
   const [filter, setFilter] = useState<Position | "ALL">("ALL");
   const [search, setSearch] = useState("");
@@ -56,39 +50,14 @@ export default function SquadBuilderPage() {
     return () => clearInterval(i);
   }, [addressLower]);
 
-  // Read PlayerMint tokenIds owned by the user
-  const { data: playerMintTokens } = useReadContract({
-    address: CONTRACT_ADDRESSES.playerMint,
-    abi: PLAYER_MINT_ABI,
-    functionName: "tokensOf",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts },
-  });
-  // Batch-fetch tokenInfo for each
-  const tokenInfoCalls = useMemo(() => {
-    if (!playerMintTokens) return [];
-    return (playerMintTokens as readonly bigint[]).map((tid) => ({
-      address: CONTRACT_ADDRESSES.playerMint,
-      abi: PLAYER_MINT_ABI,
-      functionName: "tokenInfo" as const,
-      args: [tid] as const,
-    }));
-  }, [playerMintTokens]);
-  const { data: tokenInfos } = useReadContracts({
-    contracts: tokenInfoCalls,
-    query: { enabled: tokenInfoCalls.length > 0 },
-  });
+  // Read player NFTs owned by the user (each already carries its playerId)
+  const { data: playerTokens } = usePlayerTokens(pubkey);
   const mintedIds = useMemo(() => {
-    if (!tokenInfos) return [];
-    const ids: string[] = [];
-    tokenInfos.forEach((r) => {
-      if (r.status === "success") {
-        const info = r.result as unknown as { playerId: string };
-        if (info?.playerId) ids.push(info.playerId);
-      }
-    });
-    return ids;
-  }, [tokenInfos]);
+    if (!playerTokens) return [];
+    return playerTokens
+      .map((t) => t.playerId)
+      .filter((id): id is string => !!id);
+  }, [playerTokens]);
 
   // Owned roster = unique union of starter + minted, mapped to Player records
   const ownedRoster = useMemo<Player[]>(() => {
@@ -110,13 +79,7 @@ export default function SquadBuilderPage() {
   }, [ownedRoster, filter, search]);
 
   // Already-minted check
-  const { data: hasMinted } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT,
-    abi: GAFFER_NFT_ABI,
-    functionName: "hasMinted",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address },
-  });
+  const { data: hasMinted } = useHasMinted(pubkey);
 
   // Squad composition rules
   const filledCount = slots.filter((s) => s.player !== null).length;
@@ -183,33 +146,27 @@ export default function SquadBuilderPage() {
   }, [isReady]);
 
   // ─── Mint transaction ──────────────────────────────────────────────────────
-  const { writeContract, data: hash, isPending: isMinting, error: writeError } =
-    useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isMinted } =
-    useWaitForTransactionReceipt({ hash });
-  const { ensureChain } = useEnsureChain();
+  const [isMinting, setIsMinting] = useState(false);
+  const [isMinted, setIsMinted] = useState(false);
+  const [writeError, setWriteError] = useState<Error | null>(null);
+  // On Solana the wallet confirms the tx inline, so there is no separate
+  // "confirming" phase — keep the flag for UI parity with the EVM flow.
+  const isConfirming = false;
 
   async function handleMint() {
-    if (!isReady || !address) return;
-    const playerIds = slots.map((s) => s.player!.id) as [string, string, string, string, string];
-    const positions = slots.map((s) => POSITION_NUM[s.player!.position]) as [
-      number,
-      number,
-      number,
-      number,
-      number
-    ];
+    if (!isReady || !pubkey) return;
+    const playerIds = slots.map((s) => s.player!.id);
+    const positions = slots.map((s) => POSITION_NUM[s.player!.position]);
+    setWriteError(null);
+    setIsMinting(true);
     try {
-      await ensureChain();
-    } catch {
-      return; // user rejected the network switch
+      await send([ixMintSquad(pubkey, playerIds, positions)]);
+      setIsMinted(true);
+    } catch (e) {
+      setWriteError(e as Error);
+    } finally {
+      setIsMinting(false);
     }
-    writeContract({
-      address: CONTRACT_ADDRESSES.gafferNFT,
-      abi: GAFFER_NFT_ABI,
-      functionName: "mintSquad",
-      args: [playerIds, positions],
-    });
   }
 
   return (

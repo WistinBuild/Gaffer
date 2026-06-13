@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { zeroAddress, type Address } from "viem";
-import { fromUSDC } from "@/lib/usdc";
+import { useGaffer, useManagerRecord, useHasMinted, useSquadCards, usePlayerTokens } from "@/lib/useGaffer";
+import { useAllWars } from "@/lib/onchain";
+import { fromUSDC } from "@/lib/usdcSolana";
 import {
   getStarterIds,
   readPoints,
@@ -14,7 +14,6 @@ import {
   UPGRADE_COST,
   MAX_UPGRADES,
 } from "@/lib/userRoster";
-import { PLAYER_MINT_ABI } from "@/lib/contracts";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -23,50 +22,17 @@ import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import {
-  CONTRACT_ADDRESSES,
-  GAFFER_NFT_ABI,
-  SQUAD_WARS_ABI,
-} from "@/lib/contracts";
+import type { ChainCard } from "@/lib/gafferPrograms";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
 
 const players = playersData as Player[];
 const pick = (id: string) => players.find((p) => p.id === id) ?? { id: "?", name: "Unknown", shortName: "?", nation: "?", nationCode: "?", position: "MID" as const, rating: 70, pace: 70, shooting: 70, passing: 70, defending: 70, physical: 70 };
 
-const hasContracts = CONTRACT_ADDRESSES.squadWars !== zeroAddress;
+// The Solana "empty"/default pubkey — used as the war winner when a war is a draw.
+const ZERO_PUBKEY = "11111111111111111111111111111111";
 const RARITY_NAMES = ["BRONZE", "SILVER", "GOLD", "ICON"] as const;
 type RarityName = typeof RARITY_NAMES[number];
-
-// On-chain Player Card shape (matches GafferNFT.getCard return)
-interface ChainCard {
-  playerId: string;
-  position: number;
-  rarity: number;
-  tournamentPts: number;
-  goals: number;
-  assists: number;
-  cleanSheets: number;
-}
-
-interface ChainWar {
-  id: bigint;
-  challenger: Address;
-  opponent: Address;
-  stake: bigint;
-  matchday: bigint;
-  captainSlot: number;
-  benchedSlot: number;
-  opponentCaptainSlot: number;
-  opponentBenchedSlot: number;
-  challengerScore: bigint;
-  opponentScore: bigint;
-  status: number;
-  winner: Address;
-  decisionLocked: boolean;
-}
-
-const WAR_SCAN_LIMIT = 30;
 
 // Achievements are computed dynamically inside the component from chain reads.
 
@@ -76,84 +42,33 @@ function truncate(addr?: string) {
 }
 
 export default function ProfilePage() {
-  const { address, isConnected } = useAccount();
-  const me = address?.toLowerCase();
+  const { address, pubkey, isConnected } = useGaffer();
+  const me = address;
 
-  const { data: wins } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars, abi: SQUAD_WARS_ABI, functionName: "wins",
-    args: address ? [address] : undefined, query: { enabled: !!address && hasContracts },
-  });
-  const { data: losses } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars, abi: SQUAD_WARS_ABI, functionName: "losses",
-    args: address ? [address] : undefined, query: { enabled: !!address && hasContracts },
-  });
-  const { data: hasMinted } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT, abi: GAFFER_NFT_ABI, functionName: "hasMinted",
-    args: address ? [address] : undefined, query: { enabled: !!address && hasContracts },
-  });
+  const { data: record } = useManagerRecord(pubkey);
+  const { data: hasMinted } = useHasMinted(pubkey);
 
-  // ─── Read squad token IDs ────────────────────────────────────────────────
-  const { data: squadTokens } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT, abi: GAFFER_NFT_ABI, functionName: "getSquad",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts && !!hasMinted },
-  });
-
-  // ─── Batch-fetch each card's full metadata ───────────────────────────────
-  const cardContracts = useMemo(() => {
-    if (!squadTokens) return [];
-    return (squadTokens as readonly bigint[]).map((tokenId) => ({
-      address: CONTRACT_ADDRESSES.gafferNFT,
-      abi: GAFFER_NFT_ABI,
-      functionName: "getCard" as const,
-      args: [tokenId] as const,
-    }));
-  }, [squadTokens]);
-
-  const { data: cardResults } = useReadContracts({
-    contracts: cardContracts,
-    query: { enabled: cardContracts.length > 0 },
-  });
-
-  const cards: ChainCard[] = useMemo(() => {
-    if (!cardResults) return [];
-    return cardResults
-      .map((r) => (r.status === "success" ? (r.result as unknown as ChainCard) : null))
-      .filter((c): c is ChainCard => c !== null);
-  }, [cardResults]);
+  // ─── Squad cards (null = not minted) ─────────────────────────────────────
+  const { data: squadCards } = useSquadCards(pubkey);
+  const cards: ChainCard[] = useMemo(() => squadCards ?? [], [squadCards]);
 
   // ─── Scan resolved wars (same pattern as /wars) ──────────────────────────
-  const warContracts = useMemo(
-    () =>
-      Array.from({ length: WAR_SCAN_LIMIT }, (_, i) => ({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "getWar" as const,
-        args: [BigInt(i + 1)] as const,
-      })),
-    [],
-  );
-  const { data: warResults } = useReadContracts({
-    contracts: warContracts,
-    query: { enabled: hasContracts && !!address },
-  });
-  const myWars: ChainWar[] = useMemo(() => {
-    if (!warResults || !me) return [];
-    return warResults
-      .map((r) => (r.status === "success" ? (r.result as unknown as ChainWar) : null))
-      .filter((w): w is ChainWar => w !== null && w.challenger !== zeroAddress)
-      .filter((w) => w.status === 2 && (w.challenger.toLowerCase() === me || w.opponent.toLowerCase() === me))
+  const { wars: allWars } = useAllWars();
+  const myWars = useMemo(() => {
+    if (!me) return [];
+    return allWars
+      .filter((w) => w.status === 2 && (w.challenger === me || w.opponent === me))
       .sort((a, b) => Number(b.id - a.id));
-  }, [warResults, me]);
+  }, [allWars, me]);
 
   // ─── Aggregates ──────────────────────────────────────────────────────────
-  const winsN = Number(wins ?? BigInt(0));
-  const lossN = Number(losses ?? BigInt(0));
+  const winsN = Number(record?.wins ?? 0);
+  const lossN = Number(record?.losses ?? 0);
   const total = winsN + lossN;
   const winRate = total === 0 ? 0 : Math.round((winsN / total) * 100);
 
   // ─── Points wallet — synced from W/L ─────────────────────────────────────
-  const addressLower = address?.toLowerCase() ?? "";
+  const addressLower = address ?? "";
   const [points, setPoints] = useState(0);
   const [upgrades, setUpgrades] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -176,37 +91,11 @@ export default function ProfilePage() {
     if (!addressLower) return;
     setStarterIdsState(getStarterIds(addressLower));
   }, [addressLower]);
-  const { data: playerMintTokens } = useReadContract({
-    address: CONTRACT_ADDRESSES.playerMint,
-    abi: PLAYER_MINT_ABI,
-    functionName: "tokensOf",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts },
-  });
-  const tokenInfoCalls = useMemo(() => {
-    if (!playerMintTokens) return [];
-    return (playerMintTokens as readonly bigint[]).map((tid) => ({
-      address: CONTRACT_ADDRESSES.playerMint,
-      abi: PLAYER_MINT_ABI,
-      functionName: "tokenInfo" as const,
-      args: [tid] as const,
-    }));
-  }, [playerMintTokens]);
-  const { data: tokenInfos } = useReadContracts({
-    contracts: tokenInfoCalls,
-    query: { enabled: tokenInfoCalls.length > 0 },
-  });
+  const { data: playerTokens } = usePlayerTokens(pubkey);
   const mintedIds = useMemo(() => {
-    if (!tokenInfos) return [];
-    const ids: string[] = [];
-    tokenInfos.forEach((r) => {
-      if (r.status === "success") {
-        const info = r.result as unknown as { playerId: string };
-        if (info?.playerId) ids.push(info.playerId);
-      }
-    });
-    return ids;
-  }, [tokenInfos]);
+    if (!playerTokens) return [];
+    return playerTokens.map((t) => t.playerId).filter((id): id is string => !!id);
+  }, [playerTokens]);
   const ownedRoster = useMemo(() => {
     const set = new Set<string>([...starterIdsState, ...mintedIds]);
     return Array.from(set)
@@ -219,8 +108,8 @@ export default function ProfilePage() {
   const profitUSDC = useMemo(() => {
     return myWars.reduce((acc, w) => {
       const stake = Number(fromUSDC(w.stake));
-      const youWon = w.winner.toLowerCase() === me;
-      const isDraw = w.winner === zeroAddress;
+      const youWon = w.winner === me;
+      const isDraw = w.winner === ZERO_PUBKEY;
       if (isDraw) return acc; // no net profit on draws
       return acc + (youWon ? stake * 2 * 0.95 - stake : -stake);
     }, 0);
@@ -330,7 +219,7 @@ export default function ProfilePage() {
                       </div>
                     ))}
                     {/* While loading: show placeholders */}
-                    {cards.length === 0 && squadTokens && (squadTokens as readonly bigint[]).length > 0 && Array.from({ length: 5 }).map((_, i) => (
+                    {cards.length === 0 && hasMinted && squadCards === undefined && Array.from({ length: 5 }).map((_, i) => (
                       <div key={`skel-${i}`} className="w-44 h-60 rounded-xl bg-white/[0.04] animate-pulse" />
                     ))}
                   </div>
@@ -444,9 +333,9 @@ export default function ProfilePage() {
                 <div className="mt-8 rounded-[2rem] p-1.5 bg-white/[0.04] hairline-strong">
                   <div className="rounded-[calc(2rem-0.375rem)] bg-gaffer-surface/60 hairline inner-glow overflow-hidden">
                     {myWars.map((w, i) => {
-                      const youAreChallenger = w.challenger.toLowerCase() === me;
-                      const youWon = w.winner.toLowerCase() === me;
-                      const isDraw = w.winner === zeroAddress;
+                      const youAreChallenger = w.challenger === me;
+                      const youWon = w.winner === me;
+                      const isDraw = w.winner === ZERO_PUBKEY;
                       const opp = youAreChallenger ? w.opponent : w.challenger;
                       const yourScore = youAreChallenger ? w.challengerScore : w.opponentScore;
                       const theirScore = youAreChallenger ? w.opponentScore : w.challengerScore;

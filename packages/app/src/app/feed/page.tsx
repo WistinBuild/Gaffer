@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { zeroAddress } from "viem";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { HoverWord, LetterWave } from "@/components/ui/HoverText";
@@ -11,7 +10,8 @@ import { FOOTBALL_IMAGERY } from "@/lib/imagery";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
 import { useAllWars, shortAddr, hasContracts, type ChainWar } from "@/lib/onchain";
-import { fromUSDC } from "@/lib/usdc";
+import { fromUSDC } from "@/lib/usdcSolana";
+const zeroAddress = "11111111111111111111111111111111"; // Solana default pubkey = "no winner"
 
 const players = playersData as Player[];
 const pick = (id: string) => players.find((p) => p.id === id)!;

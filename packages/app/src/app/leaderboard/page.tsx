@@ -1,117 +1,79 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { zeroAddress, type Address } from "viem";
-import { fromUSDC } from "@/lib/usdc";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useGaffer } from "@/lib/useGaffer";
+import { useAllWars } from "@/lib/onchain";
+import { getLeaderboard } from "@/lib/gafferPrograms";
+import { fromUSDC } from "@/lib/usdcSolana";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import { CONTRACT_ADDRESSES, SQUAD_WARS_ABI } from "@/lib/contracts";
 
-const hasContracts = CONTRACT_ADDRESSES.squadWars !== zeroAddress;
 type FilterKey = "all" | "week" | "matchday";
 
 interface Manager {
   rank: number;
-  address: Address;
+  address: string;
   w: number;
   l: number;
   win_rate: number;
   isYou: boolean;
 }
 
-const WAR_SCAN_LIMIT = 30;
-
 export default function LeaderboardPage() {
-  const { address } = useAccount();
-  const me = address?.toLowerCase();
+  const { address, conn } = useGaffer();
+  const me = address;
   const [filter, setFilter] = useState<FilterKey>("all");
 
-  // ─── Read top-50 from contract (sorted by wins internally) ───────────────
-  const { data: lbData } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars,
-    abi: SQUAD_WARS_ABI,
-    functionName: "getLeaderboard",
-    args: [BigInt(50)],
-    query: { enabled: hasContracts },
+  // ─── Read top-50 from chain (sorted by wins internally) ──────────────────
+  const { data: lbData } = useQuery({
+    queryKey: ["leaderboard", 50],
+    queryFn: () => getLeaderboard(conn, 50),
   });
 
-  const [managers, winCounts] = (lbData ?? [[], []]) as readonly [readonly Address[], readonly bigint[]];
-
-  // Fetch losses per manager via multicall
-  const lossContracts = useMemo(
-    () =>
-      managers.map((addr) => ({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "losses" as const,
-        args: [addr] as const,
-      })),
-    [managers],
-  );
-  const { data: lossResults } = useReadContracts({
-    contracts: lossContracts,
-    query: { enabled: managers.length > 0 },
-  });
+  const rows = lbData ?? [];
 
   // Build manager list
   const board: Manager[] = useMemo(() => {
-    if (managers.length === 0) return [];
-    return managers
-      .filter((a) => a !== zeroAddress)
-      .map((addr, i) => {
-        const w = Number(winCounts[i] ?? BigInt(0));
-        const lossRaw = lossResults?.[i];
-        const l = lossRaw?.status === "success" ? Number(lossRaw.result as unknown as bigint) : 0;
+    if (rows.length === 0) return [];
+    return rows
+      .map((row, i) => {
+        const w = row.wins;
+        const l = row.losses;
         const total = w + l;
         return {
           rank: i + 1,
-          address: addr,
+          address: row.manager,
           w,
           l,
           win_rate: total === 0 ? 0 : Math.round((w / total) * 100),
-          isYou: addr.toLowerCase() === me,
+          isYou: row.manager === me,
         };
       })
       .filter((m) => m.w + m.l > 0); // only managers who've played
-  }, [managers, winCounts, lossResults, me]);
+  }, [rows, me]);
 
-  // ─── Aggregate totals — scan resolved wars for stake volume ──────────────
-  const warContracts = useMemo(
-    () =>
-      Array.from({ length: WAR_SCAN_LIMIT }, (_, i) => ({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "getWar" as const,
-        args: [BigInt(i + 1)] as const,
-      })),
-    [],
-  );
-  const { data: warResults } = useReadContracts({
-    contracts: warContracts,
-    query: { enabled: hasContracts },
-  });
+  // ─── Aggregate totals — scan wars for stake volume ───────────────────────
+  const { wars: allWars } = useAllWars();
   const totals = useMemo(() => {
-    if (!warResults) return { staked: "0.00", wars: 0, managers: 0 };
-    const wars = warResults
-      .map((r) => (r.status === "success" ? (r.result as any) : null))
-      .filter((w) => w !== null && w.challenger !== zeroAddress);
+    const wars = allWars;
+    if (wars.length === 0) return { staked: "0.00", wars: 0, managers: 0 };
     let staked = 0;
     const mgrSet = new Set<string>();
-    wars.forEach((w: any) => {
-      const stake = Number(fromUSDC(w.stake));
+    wars.forEach((w) => {
+      const stake = fromUSDC(w.stake);
       // Both sides put up the stake once status >= 1 (Active or Resolved)
       const sides = w.status >= 1 ? 2 : 1;
       staked += stake * sides;
-      mgrSet.add(w.challenger.toLowerCase());
-      if (w.opponent !== zeroAddress) mgrSet.add(w.opponent.toLowerCase());
+      mgrSet.add(w.challenger);
+      if (w.opponent) mgrSet.add(w.opponent);
     });
     return { staked: staked.toFixed(3), wars: wars.length, managers: mgrSet.size };
-  }, [warResults]);
+  }, [allWars]);
 
   const podium = board.slice(0, 3);
   const rest = board.slice(3);
@@ -236,7 +198,7 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="col-span-1 sm:col-span-5 flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-gaffer-pitch ring-1 ring-white/15 flex items-center justify-center font-mono text-[10px] text-white/50">
-                        {m.address.slice(2, 4).toUpperCase()}
+                        {m.address.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <div className="font-semibold text-white text-base font-mono">

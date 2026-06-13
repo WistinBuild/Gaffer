@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
-import { useAccount, useReadContract } from "wagmi";
+import { useGaffer, useManagerRecord, useHasMinted } from "@/lib/useGaffer";
 import { Navbar } from "@/components/layout/Navbar";
 import { WelcomePack } from "@/components/ui/WelcomePack";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -10,7 +10,6 @@ import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { ConnectButton } from "@/components/ui/ConnectButton";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import { CONTRACT_ADDRESSES, GAFFER_NFT_ABI, SQUAD_WARS_ABI } from "@/lib/contracts";
 import { consumePitchEntry, playCrowd, playHover, playClick, unlockAudio } from "@/lib/sounds";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
@@ -27,7 +26,7 @@ function truncate(addr?: string) {
 }
 
 export default function PlayHub() {
-  const { address, isConnected } = useAccount();
+  const { address, pubkey, isConnected } = useGaffer();
 
   // Continue the crowd cheer from portal entry + clear the loading splash
   useEffect(() => {
@@ -43,24 +42,11 @@ export default function PlayHub() {
     });
   }, []);
 
-  const noAddr = "0x0000000000000000000000000000000000000000";
-  const hasContracts = CONTRACT_ADDRESSES.squadWars !== noAddr;
+  const { data: record } = useManagerRecord(pubkey);
+  const { data: hasMinted } = useHasMinted(pubkey);
 
-  const { data: wins } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars, abi: SQUAD_WARS_ABI, functionName: "wins",
-    args: address ? [address] : undefined, query: { enabled: !!address && hasContracts },
-  });
-  const { data: losses } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars, abi: SQUAD_WARS_ABI, functionName: "losses",
-    args: address ? [address] : undefined, query: { enabled: !!address && hasContracts },
-  });
-  const { data: hasMinted } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT, abi: GAFFER_NFT_ABI, functionName: "hasMinted",
-    args: address ? [address] : undefined, query: { enabled: !!address && hasContracts },
-  });
-
-  const winsN = Number(wins ?? BigInt(0));
-  const lossN = Number(losses ?? BigInt(0));
+  const winsN = record?.wins ?? 0;
+  const lossN = record?.losses ?? 0;
   const tier = winsN >= 8 ? "Elite" : winsN >= 4 ? "Pro" : winsN >= 1 ? "Amateur" : "Rookie";
 
   return (

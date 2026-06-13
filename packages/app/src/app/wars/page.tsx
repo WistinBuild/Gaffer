@@ -2,17 +2,10 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useAccount,
-  useReadContract,
-  useReadContracts,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  usePublicClient,
-} from "wagmi";
-import { zeroAddress, decodeEventLog, type Address } from "viem";
-import { toUSDC, fromUSDC, ensureUsdcAllowance } from "@/lib/usdc";
-import { useEnsureChain } from "@/lib/useEnsureChain";
+import { useGaffer, useGafferSend, useManagerRecord, useHasMinted, useSquadCards } from "@/lib/useGaffer";
+import { useAllWars } from "@/lib/onchain";
+import { ixCreateWar, ixAcceptWar, ixLockDecision, ataPda, nextWarId, type ChainWar } from "@/lib/gafferPrograms";
+import { toUSDC, fromUSDC } from "@/lib/usdcSolana";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -21,116 +14,53 @@ import { HoverWord, LetterWave } from "@/components/ui/HoverText";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { RelatedLinks } from "@/components/ui/RelatedLinks";
 import { FOOTBALL_IMAGERY } from "@/lib/imagery";
-import {
-  CONTRACT_ADDRESSES,
-  SQUAD_WARS_ABI,
-  GAFFER_NFT_ABI,
-  WAR_STATUS_LABEL,
-} from "@/lib/contracts";
 import playersData from "@/data/players.json";
 import { Player } from "@/types";
 
 const players = playersData as Player[];
 const pick = (id: string) => players.find((p) => p.id === id)!;
 
-const hasContracts = CONTRACT_ADDRESSES.squadWars !== zeroAddress;
+const hasContracts = true;
 
-// Scan war IDs 1..WAR_SCAN_LIMIT via multicall to enumerate every war
-const WAR_SCAN_LIMIT = 30;
+// Solana's default/empty pubkey (used by the program when there is no winner = draw).
+const EMPTY_PUBKEY = "11111111111111111111111111111111";
 
-// SquadWars.MIN_STAKE is 1000 base units = 0.001 USDC. Stakes below this revert.
+// SquadWars MIN_STAKE is 1000 base units = 0.001 USDC. Stakes below this revert.
 const MIN_STAKE_USDC = 0.001;
 
-// On-chain War shape (matches SquadWars.getWar return)
-interface ChainWar {
-  id: bigint;
-  challenger: Address;
-  opponent: Address;
-  stake: bigint;
-  matchday: bigint;
-  captainSlot: number;
-  benchedSlot: number;
-  opponentCaptainSlot: number;
-  opponentBenchedSlot: number;
-  challengerScore: bigint;
-  opponentScore: bigint;
-  status: number; // 0=Open, 1=Active, 2=Resolved, 3=Cancelled
-  winner: Address;
-  decisionLocked: boolean;
-}
 function truncAddr(a?: string) {
   if (!a) return "—";
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
 export default function WarsPage() {
-  const { address, isConnected } = useAccount();
+  const { address, pubkey, isConnected, conn } = useGaffer();
+  const send = useGafferSend();
   const router = useRouter();
-  const me = address?.toLowerCase();
+  const me = address;
 
   // ─── On-chain reads ──────────────────────────────────────────────────────
-  const { data: wins, refetch: refetchWins } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars,
-    abi: SQUAD_WARS_ABI,
-    functionName: "wins",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts },
-  });
-  const { data: losses, refetch: refetchLosses } = useReadContract({
-    address: CONTRACT_ADDRESSES.squadWars,
-    abi: SQUAD_WARS_ABI,
-    functionName: "losses",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts },
-  });
-  const { data: hasMinted } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT,
-    abi: GAFFER_NFT_ABI,
-    functionName: "hasMinted",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts },
-  });
+  const { data: record, refetch: refetchRecord } = useManagerRecord(pubkey);
+  const { data: hasMinted } = useHasMinted(pubkey);
 
-  // ─── Scan ALL wars via multicall (IDs 1..WAR_SCAN_LIMIT) ────────────────
-  const warContracts = useMemo(
-    () =>
-      Array.from({ length: WAR_SCAN_LIMIT }, (_, i) => ({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "getWar" as const,
-        args: [BigInt(i + 1)] as const,
-      })),
-    [],
-  );
-
-  const { data: warResults, refetch: refetchWars } = useReadContracts({
-    contracts: warContracts,
-    query: { enabled: hasContracts },
-  });
-
-  // Parse — keep only wars that actually exist (challenger != zero)
-  const allWars: ChainWar[] = useMemo(() => {
-    if (!warResults) return [];
-    return warResults
-      .map((r) => (r.status === "success" ? (r.result as unknown as ChainWar) : null))
-      .filter((w): w is ChainWar => w !== null && w.challenger !== zeroAddress);
-  }, [warResults]);
+  // ─── All wars (existing onchain hook) ──────────────────────────────────────
+  const { wars: allWars, refetch: refetchWars } = useAllWars();
 
   const openWars = useMemo(() => allWars.filter((w) => w.status === 0), [allWars]);
   const myActiveWar = useMemo(
-    () => allWars.find((w) => w.status === 1 && (w.challenger.toLowerCase() === me || w.opponent.toLowerCase() === me)),
+    () => allWars.find((w) => w.status === 1 && (w.challenger === me || w.opponent === me)),
     [allWars, me],
   );
   const myResolvedWars = useMemo(
     () =>
       allWars
-        .filter((w) => w.status === 2 && (w.challenger.toLowerCase() === me || w.opponent.toLowerCase() === me))
+        .filter((w) => w.status === 2 && (w.challenger === me || w.opponent === me))
         .sort((a, b) => Number(b.id - a.id)), // newest first
     [allWars, me],
   );
 
-  const winsN = Number(wins ?? BigInt(0));
-  const lossN = Number(losses ?? BigInt(0));
+  const winsN = record?.wins ?? 0;
+  const lossN = record?.losses ?? 0;
   const totalGames = winsN + lossN;
   const winRate = totalGames === 0 ? 0 : Math.round((winsN / totalGames) * 100);
 
@@ -142,142 +72,112 @@ export default function WarsPage() {
   const [botPhase, setBotPhase] = useState<"idle" | "awaiting-bot" | "ready" | "error">("idle");
   const [botError, setBotError] = useState<string | null>(null);
 
-  const publicClient = usePublicClient();
-  const { wrongChain, ensureChain } = useEnsureChain();
-  const { writeContract, data: txHash, isPending: txSending, error: txError } =
-    useWriteContract();
-  const { writeContractAsync: approveAsync } = useWriteContract();
-  const { writeContractAsync: acceptAsync } = useWriteContract();
-  const { data: txReceipt, isLoading: txConfirming, isSuccess: txDone } =
-    useWaitForTransactionReceipt({ hash: txHash });
+  // ─── Local tx state (replaces wagmi write/receipt machinery) ─────────────
+  const [txSending, setTxSending] = useState(false);
+  const [txDone, setTxDone] = useState(false);
+  const [txSig, setTxSig] = useState<string | null>(null);
+  const [txError, setTxError] = useState<Error | null>(null);
 
   const [accepting, setAccepting] = useState<bigint | null>(null);
 
   // Stake field must be a number ≥ MIN_STAKE, else createWar reverts "Stake too low".
   const stakeNum = Number(createStake);
   const stakeValid = Number.isFinite(stakeNum) && stakeNum >= MIN_STAKE_USDC;
-  const canStake = isConnected && !wrongChain && Boolean(hasMinted);
+  const canStake = isConnected && Boolean(hasMinted);
 
-  // Refetch all war state when a tx confirms (creates / accepts / locks)
+  // Refetch all war/record state once a tx confirms (creates / accepts / locks)
   useEffect(() => {
     if (txDone) {
       refetchWars();
-      refetchWins();
-      refetchLosses();
+      refetchRecord();
     }
-  }, [txDone, refetchWars, refetchWins, refetchLosses]);
+  }, [txDone, refetchWars, refetchRecord]);
 
   async function handleCreate() {
-    if (!hasContracts) return alert("Contracts not deployed yet — set NEXT_PUBLIC_*_ADDRESS in .env.local");
-    if (!address || !publicClient) return;
+    if (!pubkey) return;
     if (!hasMinted) { alert("Mint a squad first — you need 5 players to enter a war."); router.push("/squad"); return; }
     if (!stakeValid) { alert(`Stake must be at least ${MIN_STAKE_USDC} USDC.`); return; }
     setChallengeMode("human");
     setBotError(null);
-    const stake = toUSDC(createStake);
+    setTxError(null);
+    setTxDone(false);
+    setTxSig(null);
+    setTxSending(true);
     try {
-      await ensureChain();
-      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
-      writeContract({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "createWar",
-        args: [BigInt(createMD), stake],
-      });
-    } catch { /* user rejected approval / network switch */ }
+      const warId = await nextWarId(conn);
+      const ix = ixCreateWar(pubkey, warId, BigInt(createMD), toUSDC(createStake), ataPda(pubkey));
+      const sig = await send([ix]);
+      setTxSig(sig);
+      setTxDone(true);
+    } catch (e) {
+      setTxError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setTxSending(false);
+    }
   }
 
   async function handleChallengeBot() {
-    if (!hasContracts) return alert("Contracts not deployed yet");
-    if (!address || !publicClient) return;
+    if (!pubkey) return;
     if (!hasMinted) { alert("Mint a squad first — you need 5 players to enter a war."); router.push("/squad"); return; }
     if (!stakeValid) { setBotError(`Stake must be at least ${MIN_STAKE_USDC} USDC.`); setBotPhase("error"); return; }
     setChallengeMode("bot");
     setBotPhase("idle");
     setBotError(null);
-    const stake = toUSDC(createStake);
+    setTxError(null);
+    setTxDone(false);
+    setTxSig(null);
+    setTxSending(true);
+    let warId: bigint;
     try {
-      await ensureChain();
-      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
-      writeContract({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "createWar",
-        args: [BigInt(createMD), stake],
+      warId = await nextWarId(conn);
+      const ix = ixCreateWar(pubkey, warId, BigInt(createMD), toUSDC(createStake), ataPda(pubkey));
+      const sig = await send([ix]);
+      setTxSig(sig);
+      setTxDone(true);
+    } catch (e) {
+      setBotError(e instanceof Error ? e.message : "Stake transaction rejected.");
+      setBotPhase("error");
+      setTxError(e instanceof Error ? e : new Error(String(e)));
+      return;
+    } finally {
+      setTxSending(false);
+    }
+
+    // After the createWar tx confirms in bot mode: ask the backend bot to
+    // acceptWar + lockDecision for the war we just created.
+    const stake = toUSDC(createStake).toString();
+    const wid = warId;
+    setBotPhase("awaiting-bot");
+    try {
+      const res = await fetch("/api/bot/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ warId: wid.toString(), stake }),
       });
-    } catch {
-      setBotError("Approval rejected.");
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || `bot/challenge ${res.status}`);
+      setBotPhase("ready");
+      // Stash setup hint so /squad-setup default captain matches the user's choice slot
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`bot_war_${wid}`, "1");
+      }
+      router.push(`/squad-setup/${wid}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setBotError(msg);
       setBotPhase("error");
     }
   }
 
-  // After the createWar tx confirms in bot mode: extract warId from the
-  // WarCreated event, then ask the backend bot to acceptWar + lockDecision.
-  useEffect(() => {
-    if (!txDone || !txReceipt || challengeMode !== "bot" || botPhase !== "idle") return;
-    let warId: bigint | null = null;
-    for (const log of txReceipt.logs) {
-      try {
-        const decoded = decodeEventLog({
-          abi: SQUAD_WARS_ABI,
-          data: log.data,
-          topics: log.topics,
-        });
-        if (decoded.eventName === "WarCreated") {
-          warId = (decoded.args as { warId: bigint }).warId;
-          break;
-        }
-      } catch { /* not a SquadWars event */ }
-    }
-    if (warId === null) {
-      setBotError("Couldn't read war id from the transaction.");
-      setBotPhase("error");
-      return;
-    }
-    const stake = toUSDC(createStake).toString();
-    const wid = warId;
-    (async () => {
-      setBotPhase("awaiting-bot");
-      try {
-        const res = await fetch("/api/bot/challenge", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ warId: wid.toString(), stake }),
-        });
-        const j = await res.json();
-        if (!res.ok || !j.ok) throw new Error(j.error || `bot/challenge ${res.status}`);
-        setBotPhase("ready");
-        // Stash setup hint so /squad-setup default captain matches the user's choice slot
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem(`bot_war_${wid}`, "1");
-        }
-        router.push(`/squad-setup/${wid}`);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        setBotError(msg);
-        setBotPhase("error");
-      }
-    })();
-  }, [txDone, txReceipt, challengeMode, botPhase, createStake, router]);
-
   // Accept a war: only navigate to squad-setup once the acceptWar tx is actually
   // confirmed on-chain — otherwise a rejected/failed accept would strand the user
   // on the setup page for a war they never joined.
-  async function handleAccept(warId: bigint, stake: bigint) {
-    if (!hasContracts) return alert("Contracts not deployed yet");
-    if (!address || !publicClient) return;
+  async function handleAccept(warId: bigint) {
+    if (!pubkey) return;
     if (!hasMinted) { alert("Mint a squad first — you need 5 players to accept a war."); router.push("/squad"); return; }
     setAccepting(warId);
     try {
-      await ensureChain();
-      await ensureUsdcAllowance(publicClient, approveAsync, address, CONTRACT_ADDRESSES.squadWars, stake);
-      const hash = await acceptAsync({
-        address: CONTRACT_ADDRESSES.squadWars,
-        abi: SQUAD_WARS_ABI,
-        functionName: "acceptWar",
-        args: [warId],
-      });
-      await publicClient.waitForTransactionReceipt({ hash });
+      await send([ixAcceptWar(pubkey, warId, ataPda(pubkey))]);
       if (typeof window !== "undefined") sessionStorage.setItem(`real_war_${warId}`, "1");
       router.push(`/squad-setup/${warId}`);
     } catch {
@@ -289,14 +189,21 @@ export default function WarsPage() {
   const [captainSlot, setCaptainSlot] = useState<number | null>(null);
   const [benchedSlot, setBenchedSlot] = useState<number | null>(null);
 
-  function lockDecision(warId: bigint) {
-    if (captainSlot === null || benchedSlot === null) return;
-    writeContract({
-      address: CONTRACT_ADDRESSES.squadWars,
-      abi: SQUAD_WARS_ABI,
-      functionName: "lockDecision",
-      args: [warId, captainSlot, benchedSlot],
-    });
+  async function lockDecision(warId: bigint) {
+    if (captainSlot === null || benchedSlot === null || !pubkey) return;
+    setTxError(null);
+    setTxDone(false);
+    setTxSig(null);
+    setTxSending(true);
+    try {
+      const sig = await send([ixLockDecision(pubkey, warId, captainSlot, benchedSlot)]);
+      setTxSig(sig);
+      setTxDone(true);
+    } catch (e) {
+      setTxError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setTxSending(false);
+    }
   }
 
   return (
@@ -410,7 +317,7 @@ export default function WarsPage() {
                 onCaptain={setCaptainSlot}
                 onBench={setBenchedSlot}
                 onLock={() => lockDecision(myActiveWar.id)}
-                locking={txSending || txConfirming}
+                locking={txSending}
               />
             </section>
           )}
@@ -443,7 +350,7 @@ export default function WarsPage() {
             ) : (
               <div className="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {openWars.map((w, i) => {
-                  const isMine = w.challenger.toLowerCase() === me;
+                  const isMine = w.challenger === me;
                   return (
                     <div key={String(w.id)} className="reveal" style={{ ["--stagger-delay" as any]: `${i * 60}ms` }}>
                       <OpenWarCard
@@ -453,7 +360,7 @@ export default function WarsPage() {
                         disabled={accepting !== null || !canStake}
                         onAccept={() => {
                           if (isMine) return;
-                          handleAccept(w.id, w.stake);
+                          handleAccept(w.id);
                         }}
                       />
                     </div>
@@ -491,19 +398,19 @@ export default function WarsPage() {
           )}
 
           {/* TX status banner */}
-          {(txSending || txConfirming || txDone) && (
+          {(txSending || txDone) && (
             <div className="mt-8 rounded-2xl p-[1.5px] bg-white/[0.04] hairline-strong">
               <div className="rounded-[14px] bg-gaffer-surface/80 px-5 py-3 flex items-center justify-between gap-4 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
                   <span className={`h-2 w-2 rounded-full ${txDone ? "bg-gaffer-electric animate-live-dot" : "bg-gaffer-gold animate-live-dot"}`} />
                   <span className="font-mono text-[11px] tracking-[0.22em] uppercase text-white/80">
-                    {txDone ? "Confirmed on Base" : txConfirming ? "Confirming…" : "Awaiting wallet…"}
+                    {txDone ? "Confirmed on Base" : "Awaiting wallet…"}
                   </span>
                 </div>
-                {txHash && (
-                  <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer"
+                {txSig && (
+                  <a href={`https://explorer.solana.com/tx/${txSig}?cluster=devnet`} target="_blank" rel="noreferrer"
                      className="font-mono text-[10px] tracking-[0.22em] uppercase text-gaffer-gold hover:text-white">
-                    {String(txHash).slice(0,10)}…
+                    {String(txSig).slice(0,10)}…
                   </a>
                 )}
               </div>
@@ -528,7 +435,7 @@ export default function WarsPage() {
             onStake={setCreateStake}
             onClose={() => setShowCreate(false)}
             onCreate={challengeMode === "bot" ? handleChallengeBot : handleCreate}
-            sending={txSending || txConfirming || botPhase === "awaiting-bot"}
+            sending={txSending || botPhase === "awaiting-bot"}
             done={txDone && challengeMode === "human"}
             mode={challengeMode}
             botPhase={botPhase}
@@ -594,35 +501,19 @@ function ActiveWarCard({
   locking: boolean;
 }) {
   const ready = captainSlot !== null && benchedSlot !== null && captainSlot !== benchedSlot;
-  const youAreChallenger = war.challenger.toLowerCase() === me;
+  const youAreChallenger = war.challenger === me;
   const opponent = youAreChallenger ? war.opponent : war.challenger;
   const stakeUSDC = fromUSDC(war.stake);
   const potUSDC = stakeUSDC * 2;
 
   // Read the connected manager's real on-chain squad — the slots they pick captain/bench from.
-  const { address } = useAccount();
-  const { data: squadTokens } = useReadContract({
-    address: CONTRACT_ADDRESSES.gafferNFT,
-    abi: GAFFER_NFT_ABI,
-    functionName: "getSquad",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && hasContracts },
-  });
-  const { data: squadCards } = useReadContracts({
-    contracts: ((squadTokens as readonly bigint[] | undefined) ?? []).map((t) => ({
-      address: CONTRACT_ADDRESSES.gafferNFT,
-      abi: GAFFER_NFT_ABI,
-      functionName: "getCard" as const,
-      args: [t] as const,
-    })),
-    query: { enabled: !!squadTokens },
-  });
+  const { pubkey } = useGaffer();
+  const { data: squadCards } = useSquadCards(pubkey);
   const squad = useMemo(() => {
     const labels = ["BRONZE", "SILVER", "GOLD", "ICON"] as const;
     if (!squadCards) return [] as { id: string; rarity: (typeof labels)[number] }[];
     return squadCards
-      .map((c) => (c.status === "success" ? (c.result as { playerId: string; rarity: number }) : null))
-      .filter((c): c is { playerId: string; rarity: number } => !!c && !!c.playerId)
+      .filter((c) => !!c.playerId)
       .map((c) => ({ id: c.playerId, rarity: labels[c.rarity] ?? "BRONZE" }));
   }, [squadCards]);
 
@@ -796,9 +687,9 @@ function OpenWarCard({
 }
 
 function ResolvedRowChain({ war, me, last }: { war: ChainWar; me?: string; last: boolean }) {
-  const youAreChallenger = war.challenger.toLowerCase() === me;
-  const youWon = war.winner.toLowerCase() === me;
-  const isDraw = war.winner === zeroAddress;
+  const youAreChallenger = war.challenger === me;
+  const youWon = war.winner === me;
+  const isDraw = war.winner === EMPTY_PUBKEY;
   const opp = youAreChallenger ? war.opponent : war.challenger;
   const yourScore = youAreChallenger ? war.challengerScore : war.opponentScore;
   const theirScore = youAreChallenger ? war.opponentScore : war.challengerScore;

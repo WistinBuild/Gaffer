@@ -1,9 +1,9 @@
 "use client";
 
-import { useAccount, useDisconnect, useBalance } from "wagmi";
-import { useAppKit } from "@reown/appkit/react";
+import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import { useState } from "react";
-import { activeChain } from "@/lib/chains";
+
+const NETWORK_LABEL = "Solana Devnet";
 
 function truncate(addr?: string) {
   if (!addr) return "";
@@ -11,10 +11,9 @@ function truncate(addr?: string) {
 }
 
 export function ConnectButton() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useAppKitAccount();
   const { open } = useAppKit();
   const { disconnect } = useDisconnect();
-  const { data: bal } = useBalance({ address, chainId: activeChain.id });
   const [menuOpen, setMenuOpen] = useState(false);
 
   // ─── Disconnected — open the Reown AppKit modal ───────────────────────────
@@ -62,11 +61,6 @@ export function ConnectButton() {
         <span className="font-mono text-xs tracking-tight text-white/90">
           {truncate(address)}
         </span>
-        {bal && (
-          <span className="hidden sm:inline font-mono text-[11px] text-white/50 px-2 border-l border-white/10">
-            {Number(bal.formatted).toFixed(3)} {bal.symbol}
-          </span>
-        )}
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5">
           <svg
             width="12"
@@ -93,7 +87,7 @@ export function ConnectButton() {
           >
             <div className="rounded-xl bg-black/40 p-3 mb-1">
               <div className="font-mono text-[10px] tracking-[0.2em] text-white/40 uppercase mb-1">
-                {activeChain.name}
+                {NETWORK_LABEL}
               </div>
               <div className="font-mono text-xs text-white break-all">{address}</div>
             </div>
